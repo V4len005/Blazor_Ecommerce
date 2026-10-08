@@ -1,0 +1,53 @@
+﻿@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<button type="button"
+        class="btn btn-outline-secondary"
+        @onclick="AlternarModo"
+        aria-pressed="@(modoOscuro ? "true" : "false")"
+        aria-label="@(modoOscuro ? "Activar modo claro" : "Activar modo oscuro")"
+        title="@(modoOscuro ? "Activar modo claro" : "Activar modo oscuro")">
+    <i class="bi @(modoOscuro ? "bi-sun-fill" : "bi-moon-stars-fill")" aria-hidden="true"></i>
+</button>
+
+@code {
+    private IJSObjectReference? modulo;
+    private bool modoOscuro;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./js/tienda.js");
+            modoOscuro = await modulo.InvokeAsync<bool>("obtenerModoOscuro");
+            await modulo.InvokeVoidAsync("aplicarModoOscuro", modoOscuro);
+            StateHasChanged();
+        }
+    }
+
+    private async Task AlternarModo()
+    {
+        if (modulo is null)
+        {
+            return;
+        }
+
+        modoOscuro = !modoOscuro;
+        await modulo.InvokeVoidAsync("establecerModoOscuro", modoOscuro);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (modulo is not null)
+        {
+            try
+            {
+                await modulo.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // El circuito ya se cerró: no hay nada que liberar.
+            }
+        }
+    }
+}
