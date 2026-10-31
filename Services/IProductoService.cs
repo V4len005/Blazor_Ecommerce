@@ -23,16 +23,27 @@ public interface IProductoService
     /// <summary>Crea un producto nuevo.</summary>
     /// <param name="producto">Datos del producto.</param>
     /// <returns>El producto creado, con su Id asignado.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Si incumple una regla de negocio (precio, stock, categoría), si el SKU ya existe
+    /// o si falla el guardado.
+    /// </exception>
     Task<Producto> Crear(Producto producto);
 
-    /// <summary>Actualiza los datos de un producto existente.</summary>
+    /// <summary>
+    /// Actualiza los datos de un producto existente. No modifica el stock actual:
+    /// el stock cambia solo mediante movimientos de stock y pedidos.
+    /// </summary>
     /// <param name="producto">Producto con los valores nuevos (identificado por su Id).</param>
     /// <returns>El producto actualizado.</returns>
-    /// <exception cref="InvalidOperationException">Si el producto ya no existe.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Si el producto ya no existe, si incumple una regla de negocio, si el SKU
+    /// pertenece a otro producto o si falla el guardado.
+    /// </exception>
     Task<Producto> Actualizar(Producto producto);
 
     /// <summary>Activa un producto desactivado o desactiva uno activo.</summary>
     /// <param name="id">Identificador del producto.</param>
+    /// <exception cref="InvalidOperationException">Si el producto ya no existe.</exception>
     Task CambiarActivo(int id);
 
     /// <summary>Elimina un producto de la base de datos.</summary>
