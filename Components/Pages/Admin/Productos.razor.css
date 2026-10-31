@@ -1,0 +1,23 @@
+﻿.contenedor-tabla {
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+}
+
+.tabla-admin {
+    margin-bottom: 0;
+}
+
+    .tabla-admin th,
+    .tabla-admin td {
+        color: var(--color-texto);
+        background-color: transparent;
+        border-color: var(--color-borde);
+        box-shadow: none;
+    }
+
+.acciones-fila {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+}
