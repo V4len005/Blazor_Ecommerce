@@ -1,0 +1,63 @@
+﻿@if (TotalPaginas > 1)
+{
+        <nav aria-label="Paginación de resultados">
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item @(PaginaActual <= 1 ? "disabled" : "")">
+                    <button type="button" class="page-link" disabled="@(PaginaActual <= 1)"
+                            aria-label="Página anterior" @onclick="() => IrAPagina(PaginaActual - 1)">
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    </button>
+                </li>
+
+            @foreach (var numero in NumerosVisibles())
+            {
+                        <li class="page-item @(numero == PaginaActual ? "active" : "")">
+                            <button type="button" class="page-link"
+                                    aria-label="Página @numero"
+                                    aria-current="@(numero == PaginaActual ? "page" : null)"
+                                    @onclick="() => IrAPagina(numero)">@numero</button>
+                        </li>
+            }
+
+                <li class="page-item @(PaginaActual >= TotalPaginas ? "disabled" : "")">
+                    <button type="button" class="page-link" disabled="@(PaginaActual >= TotalPaginas)"
+                            aria-label="Página siguiente" @onclick="() => IrAPagina(PaginaActual + 1)">
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+}
+
+@code {
+    private const int MaximoBotones = 5;
+
+    /// <summary>Página que se está mostrando (empieza en 1).</summary>
+    [Parameter] public int PaginaActual { get; set; } = 1;
+
+    /// <summary>Cantidad total de páginas.</summary>
+    [Parameter] public int TotalPaginas { get; set; }
+
+    /// <summary>Se dispara con el número de página elegido.</summary>
+    [Parameter] public EventCallback<int> OnCambio { get; set; }
+
+    // Calcula una ventana de hasta 5 números alrededor de la página actual.
+    private IEnumerable<int> NumerosVisibles()
+    {
+        var inicio = Math.Max(1, PaginaActual - MaximoBotones / 2);
+        var fin = Math.Min(TotalPaginas, inicio + MaximoBotones - 1);
+        inicio = Math.Max(1, fin - MaximoBotones + 1);
+
+        return Enumerable.Range(inicio, fin - inicio + 1);
+    }
+
+    private async Task IrAPagina(int pagina)
+    {
+        if (pagina < 1 || pagina > TotalPaginas || pagina == PaginaActual)
+        {
+            return;
+        }
+
+        await OnCambio.InvokeAsync(pagina);
+    }
+}

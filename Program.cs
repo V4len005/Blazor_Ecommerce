@@ -1,5 +1,6 @@
 using Blazor_Ecommerce.Components;
 using Blazor_Ecommerce.Data;
+using Blazor_Ecommerce.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,10 @@ builder.Services.AddRazorComponents()
 // EF Core: fábrica de contextos de corta vida (recomendado en Blazor Server).
 builder.Services.AddDbContextFactory<TiendaDbContext>(opciones =>
     opciones.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+// Servicios de datos: una instancia por circuito (conexión del usuario).
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<IProductoService, ProductoService>();
 
 var app = builder.Build();
 

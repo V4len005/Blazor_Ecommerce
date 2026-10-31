@@ -1,0 +1,22 @@
+﻿.page-link {
+    background-color: var(--color-superficie);
+    color: var(--color-primario);
+    border-color: var(--color-borde);
+}
+
+    .page-link:hover {
+        background-color: var(--color-fondo);
+        color: var(--color-primario-hover);
+    }
+
+.page-item.active .page-link {
+    background-color: var(--color-primario);
+    border-color: var(--color-primario);
+    color: var(--color-sobre-primario);
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--color-superficie);
+    color: var(--color-texto-suave);
+    border-color: var(--color-borde);
+}

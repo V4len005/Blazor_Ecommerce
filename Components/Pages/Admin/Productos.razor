@@ -1,0 +1,264 @@
+﻿@page "/admin/productos"
+@using System.Globalization
+@inject IProductoService ProductoServicio
+@inject ICategoriaService CategoriaServicio
+
+<PageTitle>Productos | Administración</PageTitle>
+
+<section aria-labelledby="titulo-productos">
+    <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h1 id="titulo-productos" class="h3 mb-0">Productos</h1>
+        <a href="admin/productos/nuevo" class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo producto
+        </a>
+    </header>
+
+    <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+    <form class="card card-body mb-3" role="search" aria-label="Filtrar productos"
+          @onsubmit="Buscar" @onsubmit:preventDefault>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="filtro-texto" class="form-label">Buscar</label>
+                <input id="filtro-texto" type="search" class="form-control"
+                       placeholder="Nombre, marca o SKU"
+                       @bind="textoBusqueda" @bind:event="oninput" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="filtro-categoria" class="form-label">Categoría</label>
+                <select id="filtro-categoria" class="form-select" @bind="categoriaId">
+                    <option value="">Todas</option>
+                    @foreach (var categoria in categorias)
+                    {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-search" aria-hidden="true"></i> Buscar
+                </button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+            </div>
+        </div>
+    </form>
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando productos...</span>
+            </div>
+    }
+    else
+    {
+            <p class="text-muted small mb-2" aria-live="polite">
+                Mostrando @resultado.Items.Count de @resultado.TotalRegistros producto(s)
+            </p>
+
+        @if (resultado.Items.Count == 0)
+        {
+                    <div class="alert alert-info" role="status">No se encontraron productos con esos filtros.</div>
+        }
+        else
+        {
+                    <div class="table-responsive contenedor-tabla">
+                        <table class="table tabla-admin align-middle">
+                            <caption class="visually-hidden">Listado de productos</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col" class="d-none d-md-table-cell">Categoría</th>
+                                    <th scope="col" class="text-end">Precio</th>
+                                    <th scope="col" class="text-center">Stock</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        @foreach (var p in resultado.Items)
+                        {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@p.Nombre</div>
+                                                <div class="small text-muted">@p.Marca@(string.IsNullOrWhiteSpace(p.Sku) ? "" : $" · {p.Sku}")</div>
+                                            </td>
+                                            <td class="d-none d-md-table-cell">@(p.Categoria?.Nombre)</td>
+                                            <td class="text-end text-nowrap">@FormatearPrecio(p.Precio)</td>
+                                            <td class="text-center">@p.StockActual</td>
+                                            <td>
+                                                <span class="badge @(p.Activo ? "bg-success" : "bg-secondary")">
+                                        @(p.Activo ? "Activo" : "Inactivo")
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="acciones-fila">
+                                                    <a href="admin/productos/@p.Id" class="btn btn-sm btn-outline-primary"
+                                                       aria-label="Editar @p.Nombre" title="Editar">
+                                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            aria-label="@(p.Activo ? "Desactivar" : "Activar") @p.Nombre"
+                                                            title="@(p.Activo ? "Desactivar" : "Activar")"
+                                                            @onclick="() => AlternarActivo(p)">
+                                                        <i class="bi @(p.Activo ? "bi-eye-slash" : "bi-eye")" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            aria-label="Eliminar @p.Nombre" title="Eliminar"
+                                                            @onclick="() => PedirConfirmacion(p)">
+                                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                        }
+                            </tbody>
+                        </table>
+                    </div>
+        }
+
+            <div class="mt-3">
+                <Paginacion PaginaActual="resultado.Pagina"
+                            TotalPaginas="resultado.TotalPaginas"
+                            OnCambio="CambiarPagina" />
+            </div>
+    }
+</section>
+
+<ConfirmDialog Visible="@(productoAEliminar is not null)"
+               Titulo="Eliminar producto"
+               Mensaje="@MensajeConfirmacion"
+               TextoConfirmar="Eliminar"
+               OnConfirmar="ConfirmarEliminar"
+               OnCancelar="CancelarEliminar" />
+
+@code {
+    private const int TamanioPagina = 10;
+    private static readonly CultureInfo Cultura = new("es-AR");
+
+    private ResultadoPaginado<Producto> resultado = new();
+    private List<Categoria> categorias = new();
+
+    private string textoBusqueda = string.Empty;
+    private int? categoriaId;
+    private int paginaActual = 1;
+
+    private bool cargando = true;
+    private string? mensajeError;
+    private Producto? productoAEliminar;
+
+    private string MensajeConfirmacion =>
+        $"¿Seguro que querés eliminar \"{productoAEliminar?.Nombre}\"? Esta acción no se puede deshacer. Si solo querés ocultarlo de la tienda, desactivalo.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+        await CargarCategorias();
+    }
+
+    private async Task CargarCategorias()
+    {
+        try
+        {
+            categorias = await CategoriaServicio.ObtenerTodas();
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar las categorías para el filtro.";
+        }
+    }
+
+    private async Task CargarProductos()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            resultado = await ProductoServicio.ObtenerPaginado(
+                textoBusqueda, categoriaId, paginaActual, TamanioPagina);
+
+            paginaActual = resultado.Pagina;
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar los productos. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Buscar()
+    {
+        paginaActual = 1;
+        await CargarProductos();
+    }
+
+    private async Task Limpiar()
+    {
+        textoBusqueda = string.Empty;
+        categoriaId = null;
+        paginaActual = 1;
+        await CargarProductos();
+    }
+
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        paginaActual = nuevaPagina;
+        await CargarProductos();
+    }
+
+    private async Task AlternarActivo(Producto producto)
+    {
+        try
+        {
+            await ProductoServicio.CambiarActivo(producto.Id);
+            await CargarProductos();
+        }
+        catch (InvalidOperationException ex)
+        {
+            mensajeError = ex.Message;
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudo cambiar el estado del producto.";
+        }
+    }
+
+    private void PedirConfirmacion(Producto producto) => productoAEliminar = producto;
+
+    private void CancelarEliminar() => productoAEliminar = null;
+
+    private async Task ConfirmarEliminar()
+    {
+        if (productoAEliminar is null)
+        {
+            return;
+        }
+
+        var id = productoAEliminar.Id;
+        productoAEliminar = null;
+
+        try
+        {
+            await ProductoServicio.Eliminar(id);
+            await CargarProductos();
+        }
+        catch (InvalidOperationException ex)
+        {
+            mensajeError = ex.Message;
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudo eliminar el producto.";
+        }
+    }
+
+    private void CerrarError() => mensajeError = null;
+
+    private static string FormatearPrecio(decimal precio) => precio.ToString("C", Cultura);
+}
