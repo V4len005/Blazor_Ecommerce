@@ -1,0 +1,50 @@
+﻿<article class="card producto h-100 @(SinStock ? "sin-stock" : "")">
+    <div class="contenedor-imagen">
+        @if (!string.IsNullOrWhiteSpace(Producto.ImagenUrl))
+        {
+                <img src="@Producto.ImagenUrl" alt="@Producto.Nombre" loading="lazy" />
+        }
+        else
+        {
+                <i class="bi @IconoCategoria icono" aria-hidden="true"></i>
+        }
+
+        @if (SinStock)
+        {
+                <span class="badge bg-secondary etiqueta">Sin stock</span>
+        }
+    </div>
+
+    <div class="card-body d-flex flex-column">
+        <p class="text-muted small mb-1">
+            @Producto.Marca@(Producto.Categoria is null ? "" : $" · {Producto.Categoria.Nombre}")
+        </p>
+        <h2 class="h6 card-title">@Producto.Nombre</h2>
+        <p class="small especificaciones">@Producto.Especificaciones</p>
+
+        <p class="precio mt-auto mb-2">@Formato.Precio(Producto.Precio)</p>
+
+        <a href="producto/@Producto.Id" class="btn btn-outline-primary w-100"
+           aria-label="Ver detalle de @Producto.Nombre">
+            Ver detalle
+        </a>
+    </div>
+</article>
+
+@code {
+    /// <summary>Producto que se muestra en la tarjeta. Conviene que traiga su categoría cargada.</summary>
+    [Parameter, EditorRequired] public Producto Producto { get; set; } = default!;
+
+    private bool SinStock => Producto.StockActual <= 0;
+
+    // Ícono de Bootstrap Icons según la categoría; si no se reconoce, uno genérico.
+    private string IconoCategoria => Producto.Categoria?.Nombre switch
+    {
+        "Consolas" => "bi-controller",
+        "Notebooks" => "bi-laptop",
+        "Teclados y Mouse" => "bi-keyboard",
+        "Auriculares" => "bi-headphones",
+        "Monitores" => "bi-display",
+        _ => "bi-box-seam"
+    };
+}
