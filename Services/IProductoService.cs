@@ -15,6 +15,11 @@ public interface IProductoService
     Task<ResultadoPaginado<Producto>> ObtenerPaginado(
         string? busqueda, int? categoriaId, int pagina, int tamanioPagina, bool soloActivos = false);
 
+    /// <summary>Obtiene los productos activos agregados más recientemente.</summary>
+    /// <param name="cantidad">Cantidad máxima de productos a devolver (mínimo 1).</param>
+    /// <returns>Lista de productos con su categoría, del más nuevo al más antiguo.</returns>
+    Task<List<Producto>> ObtenerRecientes(int cantidad);
+
     /// <summary>Busca un producto por su identificador.</summary>
     /// <param name="id">Identificador del producto.</param>
     /// <returns>El producto, o null si no existe.</returns>

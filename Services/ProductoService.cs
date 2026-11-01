@@ -64,6 +64,19 @@ public class ProductoService : IProductoService
         };
     }
 
+    public async Task<List<Producto>> ObtenerRecientes(int cantidad)
+    {
+        await using var contexto = await _fabrica.CreateDbContextAsync();
+
+        return await contexto.Productos
+            .AsNoTracking()
+            .Where(p => p.Activo)
+            .Include(p => p.Categoria)
+            .OrderByDescending(p => p.Id)
+            .Take(Math.Max(1, cantidad))
+            .ToListAsync();
+    }
+
     public async Task<Producto?> ObtenerPorId(int id)
     {
         await using var contexto = await _fabrica.CreateDbContextAsync();

@@ -1,0 +1,23 @@
+﻿.categorias {
+    gap: 0.5rem;
+    padding-bottom: 0.25rem;
+    overflow-x: auto;
+}
+
+    .categorias .nav-link {
+        white-space: nowrap;
+        color: var(--color-texto);
+        background-color: var(--color-superficie);
+        border: 1px solid var(--color-borde);
+        border-radius: 2rem;
+    }
+
+        .categorias .nav-link:hover {
+            color: var(--color-primario);
+        }
+
+        .categorias .nav-link.active {
+            color: var(--color-sobre-primario);
+            background-color: var(--color-primario);
+            border-color: var(--color-primario);
+        }

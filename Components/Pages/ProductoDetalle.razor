@@ -1,0 +1,128 @@
+﻿@page "/producto/{Id:int}"
+@inject IProductoService ProductoServicio
+
+<PageTitle>@(producto?.Nombre ?? "Producto") | TechStore</PageTitle>
+
+<AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+@if (cargando)
+{
+        <div class="text-center py-5" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <span class="visually-hidden">Cargando producto...</span>
+        </div>
+}
+else if (producto is not null)
+{
+    @* El estado del stock se calcula una vez y se usa en el marcado. *@
+    var estado = EstadoStock(producto);
+
+        <nav aria-label="Ruta de navegación">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="catalogo">Catálogo</a></li>
+            @if (producto.Categoria is not null)
+            {
+                        <li class="breadcrumb-item">
+                            <a href="catalogo?categoria=@producto.CategoriaId">@producto.Categoria.Nombre</a>
+                        </li>
+            }
+                <li class="breadcrumb-item active" aria-current="page">@producto.Nombre</li>
+            </ol>
+        </nav>
+
+        <article class="row g-4" aria-labelledby="titulo-producto">
+            <div class="col-12 col-md-6">
+                <div class="imagen-detalle">
+                    <ImagenProducto Producto="producto" />
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <p class="text-muted mb-1">@producto.Marca</p>
+                <h1 id="titulo-producto" class="h3">@producto.Nombre</h1>
+                <p class="precio">@Formato.Precio(producto.Precio)</p>
+                <p><span class="badge @estado.Clase">@estado.Texto</span></p>
+
+                <p>@producto.Descripcion</p>
+
+                <dl class="ficha">
+                @if (producto.Categoria is not null)
+                {
+                            <dt>Categoría</dt>
+                            <dd>@producto.Categoria.Nombre</dd>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(producto.Sku))
+                {
+                            <dt>SKU</dt>
+                            <dd>@producto.Sku</dd>
+                }
+
+                    <dt>Especificaciones</dt>
+                    <dd>@producto.Especificaciones</dd>
+                </dl>
+
+                <a href="catalogo" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al catálogo
+                </a>
+            </div>
+        </article>
+}
+else if (mensajeError is null)
+{
+        <section class="text-center py-5" aria-labelledby="titulo-no-disponible">
+            <h1 id="titulo-no-disponible" class="h3">Producto no disponible</h1>
+            <p>No encontramos el producto que buscás o ya no está a la venta.</p>
+            <a href="catalogo" class="btn btn-primary">Volver al catálogo</a>
+        </section>
+}
+
+@code {
+    /// <summary>Identificador del producto, tomado de la ruta.</summary>
+    [Parameter] public int Id { get; set; }
+
+    private Producto? producto;
+    private int? idCargado;
+    private bool cargando = true;
+    private string? mensajeError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita consultar de nuevo si el Id no cambió.
+        if (idCargado == Id)
+        {
+            return;
+        }
+
+        idCargado = Id;
+        cargando = true;
+        mensajeError = null;
+        producto = null;
+
+        try
+        {
+            var encontrado = await ProductoServicio.ObtenerPorId(Id);
+
+            // Un producto inactivo no se muestra al público.
+            producto = encontrado is { Activo: true } ? encontrado : null;
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudo cargar el producto. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private static (string Texto, string Clase) EstadoStock(Producto p) =>
+        p.StockActual <= 0
+            ? ("Sin stock", "bg-secondary")
+            : p.StockActual <= p.StockMinimo
+                ? ("¡Últimas unidades!", "bg-warning text-dark")
+                : ("En stock", "bg-success");
+
+    private void CerrarError() => mensajeError = null;
+}
