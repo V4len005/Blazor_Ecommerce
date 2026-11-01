@@ -1,0 +1,31 @@
+﻿@inject NavigationManager Navegacion
+
+<form class="buscador" role="search" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <label for="buscador-cabecera" class="visually-hidden">Buscar productos</label>
+    <div class="input-group">
+        <input id="buscador-cabecera"
+               type="search"
+               class="form-control"
+               placeholder="Buscar productos..."
+               @bind="texto"
+               @bind:event="oninput" />
+        <button type="submit" class="btn btn-primary" aria-label="Buscar">
+            <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+    </div>
+</form>
+
+@code {
+    private string texto = string.Empty;
+
+    private void Buscar()
+    {
+        var consulta = texto.Trim();
+
+        var destino = string.IsNullOrEmpty(consulta)
+            ? "catalogo"
+            : $"catalogo?busqueda={Uri.EscapeDataString(consulta)}";
+
+        Navegacion.NavigateTo(destino);
+    }
+}

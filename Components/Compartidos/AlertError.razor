@@ -1,0 +1,18 @@
+﻿@if (!string.IsNullOrWhiteSpace(Mensaje))
+{
+        <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <div class="flex-grow-1">@Mensaje</div>
+            <button type="button" class="btn-close" aria-label="Cerrar mensaje de error" @onclick="Cerrar"></button>
+        </div>
+}
+
+@code {
+    /// <summary>Texto del error. Si está vacío, el componente no muestra nada.</summary>
+    [Parameter] public string? Mensaje { get; set; }
+
+    /// <summary>Se dispara cuando la persona cierra el mensaje.</summary>
+    [Parameter] public EventCallback OnCerrar { get; set; }
+
+    private Task Cerrar() => OnCerrar.InvokeAsync();
+}

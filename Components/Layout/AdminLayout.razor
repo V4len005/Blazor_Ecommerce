@@ -1,0 +1,54 @@
+﻿@inherits LayoutComponentBase
+
+<div class="admin">
+    <header class="admin-cabecera">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-speedometer2" aria-hidden="true"></i>
+            <strong>Panel de administración</strong>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <BotonTema />
+            <a href="/" class="btn btn-outline-primary" aria-label="Ver la tienda">
+                <i class="bi bi-shop" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">Ver tienda</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="admin-cuerpo">
+        <aside class="admin-lateral" aria-label="Menú de administración">
+            <nav aria-label="Navegación de administración">
+                <ul class="admin-lista">
+                    <li>
+                        <NavLink href="admin" Match="NavLinkMatch.All">
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i> Panel
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink href="admin/productos">
+                            <i class="bi bi-box-seam" aria-hidden="true"></i> Productos
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink href="admin/stock">
+                            <i class="bi bi-boxes" aria-hidden="true"></i> Stock
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink href="admin/pedidos">
+                            <i class="bi bi-receipt" aria-hidden="true"></i> Pedidos
+                        </NavLink>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="admin-principal">
+            @Body
+        </main>
+    </div>
+
+    <footer class="admin-pie">
+        <small>Administración sin autenticación (decisión de alcance del proyecto)</small>
+    </footer>
+</div>

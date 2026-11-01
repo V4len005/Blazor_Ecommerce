@@ -1,0 +1,258 @@
+﻿@page "/admin/productos/nuevo"
+@page "/admin/productos/{Id:int}"
+@inject IProductoService ProductoServicio
+@inject ICategoriaService CategoriaServicio
+@inject NavigationManager Navegacion
+
+<PageTitle>@Titulo | Administración</PageTitle>
+
+<section class="formulario" aria-labelledby="titulo-formulario">
+    <header class="mb-3">
+        <a href="admin/productos" class="small">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver a productos
+        </a>
+        <h1 id="titulo-formulario" class="h3 mt-2">@Titulo</h1>
+    </header>
+
+    <AlertError Mensaje="@errorCarga" OnCerrar="CerrarErrorCarga" />
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando formulario...</span>
+            </div>
+    }
+    else if (productoNoEncontrado)
+    {
+            <div class="alert alert-warning" role="status">
+                No encontramos el producto que querés editar. Puede haber sido eliminado.
+            </div>
+    }
+    else if (errorCarga is null)
+    {
+            <EditForm Model="producto" OnValidSubmit="Guardar">
+                <DataAnnotationsValidator />
+
+                <fieldset class="card card-body mb-3">
+                    <legend>Datos principales</legend>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="nombre" class="form-label">Nombre</label>
+                            <InputText id="nombre" class="form-control" @bind-Value="producto.Nombre" />
+                            <ValidationMessage For="() => producto.Nombre" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="marca" class="form-label">Marca</label>
+                            <InputText id="marca" class="form-control" @bind-Value="producto.Marca" />
+                            <ValidationMessage For="() => producto.Marca" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="categoria" class="form-label">Categoría</label>
+                            <InputSelect id="categoria" class="form-select" @bind-Value="producto.CategoriaId">
+                                <option value="0">Seleccioná una categoría</option>
+                            @foreach (var categoria in categorias)
+                            {
+                                        <option value="@categoria.Id">@categoria.Nombre</option>
+                            }
+                            </InputSelect>
+                            <ValidationMessage For="() => producto.CategoriaId" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="sku" class="form-label">SKU <span class="text-muted small">(opcional)</span></label>
+                            <InputText id="sku" class="form-control" placeholder="NOT-0001" @bind-Value="producto.Sku" />
+                            <ValidationMessage For="() => producto.Sku" />
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="card card-body mb-3">
+                    <legend>Precio y stock</legend>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label for="precio" class="form-label">Precio</label>
+                            <InputNumber id="precio" class="form-control" step="any" inputmode="decimal"
+                                         @bind-Value="producto.Precio" />
+                            <ValidationMessage For="() => producto.Precio" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label for="stock" class="form-label">Stock actual</label>
+                            <InputNumber id="stock" class="form-control" disabled="@EsEdicion"
+                                         aria-describedby="ayuda-stock" @bind-Value="producto.StockActual" />
+                            <div id="ayuda-stock" class="form-text">
+                            @(EsEdicion
+                                    ? "El stock se modifica desde la sección Stock, no desde acá."
+                                    : "Cantidad inicial disponible.")
+                            </div>
+                            <ValidationMessage For="() => producto.StockActual" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label for="stock-minimo" class="form-label">Stock mínimo</label>
+                            <InputNumber id="stock-minimo" class="form-control" aria-describedby="ayuda-minimo"
+                                         @bind-Value="producto.StockMinimo" />
+                            <div id="ayuda-minimo" class="form-text">Por debajo de este valor se avisa stock bajo.</div>
+                            <ValidationMessage For="() => producto.StockMinimo" />
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="card card-body mb-3">
+                    <legend>Contenido</legend>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <InputTextArea id="descripcion" class="form-control" rows="3" @bind-Value="producto.Descripcion" />
+                            <ValidationMessage For="() => producto.Descripcion" />
+                        </div>
+
+                        <div class="col-12">
+                            <label for="especificaciones" class="form-label">Especificaciones</label>
+                            <InputText id="especificaciones" class="form-control"
+                                       placeholder="16 GB RAM / 512 GB SSD" @bind-Value="producto.Especificaciones" />
+                            <ValidationMessage For="() => producto.Especificaciones" />
+                        </div>
+
+                        <div class="col-12">
+                            <label for="imagen" class="form-label">URL de la imagen <span class="text-muted small">(opcional)</span></label>
+                            <InputText id="imagen" class="form-control" placeholder="https://..." @bind-Value="producto.ImagenUrl" />
+                            <ValidationMessage For="() => producto.ImagenUrl" />
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <InputCheckbox id="activo" class="form-check-input" @bind-Value="producto.Activo" />
+                                <label for="activo" class="form-check-label">Producto activo (visible en la tienda)</label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <AlertError Mensaje="@errorGuardado" OnCerrar="CerrarErrorGuardado" />
+
+                <div class="acciones">
+                    <a href="admin/productos" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary" disabled="@guardando">
+                    @if (guardando)
+                    {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Guardando...</span>
+                    }
+                    else
+                    {
+                                <i class="bi bi-check-lg" aria-hidden="true"></i>
+                                <span>Guardar</span>
+                    }
+                    </button>
+                </div>
+            </EditForm>
+    }
+</section>
+
+@code {
+    /// <summary>Identificador del producto a editar. En la ruta "nuevo" queda en 0.</summary>
+    [Parameter] public int Id { get; set; }
+
+    private Producto producto = new();
+    private List<Categoria> categorias = new();
+
+    private int? idCargado;
+    private bool cargando = true;
+    private bool guardando;
+    private bool productoNoEncontrado;
+    private string? errorCarga;
+    private string? errorGuardado;
+
+    private bool EsEdicion => Id > 0;
+
+    private string Titulo => EsEdicion ? "Editar producto" : "Nuevo producto";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita recargar (y perder lo escrito) si el Id no cambió.
+        if (idCargado == Id)
+        {
+            return;
+        }
+
+        idCargado = Id;
+        cargando = true;
+        productoNoEncontrado = false;
+        errorCarga = null;
+        errorGuardado = null;
+
+        try
+        {
+            if (categorias.Count == 0)
+            {
+                categorias = await CategoriaServicio.ObtenerTodas();
+            }
+
+            if (EsEdicion)
+            {
+                var encontrado = await ProductoServicio.ObtenerPorId(Id);
+
+                if (encontrado is null)
+                {
+                    productoNoEncontrado = true;
+                }
+                else
+                {
+                    producto = encontrado;
+                }
+            }
+            else
+            {
+                producto = new Producto();
+            }
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudo cargar el formulario. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Guardar()
+    {
+        guardando = true;
+        errorGuardado = null;
+
+        try
+        {
+            if (EsEdicion)
+            {
+                await ProductoServicio.Actualizar(producto);
+            }
+            else
+            {
+                await ProductoServicio.Crear(producto);
+            }
+
+            Navegacion.NavigateTo("admin/productos");
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorGuardado = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorGuardado = "No se pudo guardar el producto. Intentá de nuevo.";
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void CerrarErrorCarga() => errorCarga = null;
+
+    private void CerrarErrorGuardado() => errorGuardado = null;
+}
