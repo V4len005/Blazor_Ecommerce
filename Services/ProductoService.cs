@@ -15,7 +15,8 @@ public class ProductoService : IProductoService
     }
 
     public async Task<ResultadoPaginado<Producto>> ObtenerPaginado(
-        string? busqueda, int? categoriaId, int pagina, int tamanioPagina, bool soloActivos = false)
+        string? busqueda, int? categoriaId, int pagina, int tamanioPagina,
+        bool soloActivos = false, bool soloStockBajo = false)
     {
         await using var contexto = await _fabrica.CreateDbContextAsync();
 
@@ -24,6 +25,11 @@ public class ProductoService : IProductoService
         if (soloActivos)
         {
             consulta = consulta.Where(p => p.Activo);
+        }
+
+        if (soloStockBajo)
+        {
+            consulta = consulta.Where(p => p.StockActual <= p.StockMinimo);
         }
 
         if (categoriaId.HasValue)
@@ -100,6 +106,21 @@ public class ProductoService : IProductoService
         producto.Categoria = null;
 
         contexto.Productos.Add(producto);
+
+        // El stock inicial queda registrado como movimiento, en la misma transacción.
+        if (producto.StockActual > 0)
+        {
+            contexto.MovimientosStock.Add(new MovimientoStock
+            {
+                Producto = producto,
+                Tipo = TipoMovimiento.Ajuste,
+                Motivo = MotivoMovimiento.Ajuste,
+                Cantidad = producto.StockActual,
+                Fecha = DateTime.UtcNow,
+                Observacion = "Stock inicial"
+            });
+        }
+
         await GuardarCambios(contexto);
 
         return producto;
@@ -168,7 +189,7 @@ public class ProductoService : IProductoService
         catch (DbUpdateException ex)
         {
             throw new InvalidOperationException(
-                "No se puede eliminar el producto porque tiene registros asociados (por ejemplo, pedidos). Desactivalo en su lugar.",
+                "No se puede eliminar el producto porque tiene registros asociados (movimientos de stock o pedidos). Desactivalo en su lugar.",
                 ex);
         }
     }

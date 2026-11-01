@@ -5,15 +5,17 @@ namespace Blazor_Ecommerce.Services;
 /// <summary>Operaciones de consulta y mantenimiento sobre los productos de la tienda.</summary>
 public interface IProductoService
 {
-    /// <summary>Obtiene una página de productos, con búsqueda y filtro opcionales.</summary>
+    /// <summary>Obtiene una página de productos, con búsqueda y filtros opcionales.</summary>
     /// <param name="busqueda">Texto a buscar en nombre, marca o SKU (puede ser nulo o vacío).</param>
     /// <param name="categoriaId">Si tiene valor, solo devuelve productos de esa categoría.</param>
     /// <param name="pagina">Número de página pedido (empieza en 1; se ajusta si queda fuera de rango).</param>
     /// <param name="tamanioPagina">Cantidad de productos por página.</param>
     /// <param name="soloActivos">Si es true, excluye los productos desactivados.</param>
+    /// <param name="soloStockBajo">Si es true, devuelve solo productos con stock igual o menor a su stock mínimo.</param>
     /// <returns>La página de productos con sus totales.</returns>
     Task<ResultadoPaginado<Producto>> ObtenerPaginado(
-        string? busqueda, int? categoriaId, int pagina, int tamanioPagina, bool soloActivos = false);
+        string? busqueda, int? categoriaId, int pagina, int tamanioPagina,
+        bool soloActivos = false, bool soloStockBajo = false);
 
     /// <summary>Obtiene los productos activos agregados más recientemente.</summary>
     /// <param name="cantidad">Cantidad máxima de productos a devolver (mínimo 1).</param>
@@ -25,7 +27,10 @@ public interface IProductoService
     /// <returns>El producto, o null si no existe.</returns>
     Task<Producto?> ObtenerPorId(int id);
 
-    /// <summary>Crea un producto nuevo.</summary>
+    /// <summary>
+    /// Crea un producto nuevo. Si tiene stock inicial, registra además un movimiento
+    /// de stock en la misma transacción.
+    /// </summary>
     /// <param name="producto">Datos del producto.</param>
     /// <returns>El producto creado, con su Id asignado.</returns>
     /// <exception cref="InvalidOperationException">
@@ -53,6 +58,8 @@ public interface IProductoService
 
     /// <summary>Elimina un producto de la base de datos.</summary>
     /// <param name="id">Identificador del producto.</param>
-    /// <exception cref="InvalidOperationException">Si el producto tiene registros asociados y no se puede borrar.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Si el producto tiene movimientos de stock o pedidos asociados y no se puede borrar.
+    /// </exception>
     Task Eliminar(int id);
 }
