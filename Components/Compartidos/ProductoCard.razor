@@ -1,13 +1,6 @@
 ﻿<article class="card producto h-100 @(SinStock ? "sin-stock" : "")">
     <div class="contenedor-imagen">
-        @if (!string.IsNullOrWhiteSpace(Producto.ImagenUrl))
-        {
-                <img src="@Producto.ImagenUrl" alt="@Producto.Nombre" loading="lazy" />
-        }
-        else
-        {
-                <i class="bi @IconoCategoria icono" aria-hidden="true"></i>
-        }
+        <ImagenProducto Producto="Producto" />
 
         @if (SinStock)
         {
@@ -36,15 +29,4 @@
     [Parameter, EditorRequired] public Producto Producto { get; set; } = default!;
 
     private bool SinStock => Producto.StockActual <= 0;
-
-    // Ícono de Bootstrap Icons según la categoría; si no se reconoce, uno genérico.
-    private string IconoCategoria => Producto.Categoria?.Nombre switch
-    {
-        "Consolas" => "bi-controller",
-        "Notebooks" => "bi-laptop",
-        "Teclados y Mouse" => "bi-keyboard",
-        "Auriculares" => "bi-headphones",
-        "Monitores" => "bi-display",
-        _ => "bi-box-seam"
-    };
 }
