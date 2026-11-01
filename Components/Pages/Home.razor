@@ -1,9 +1,90 @@
 ﻿@page "/"
+@inject ICategoriaService CategoriaServicio
+@inject IProductoService ProductoServicio
 
 <PageTitle>TechStore | Inicio</PageTitle>
 
-<section class="text-center py-5" aria-labelledby="titulo-inicio">
-    <h1 id="titulo-inicio">Bienvenido a TechStore</h1>
+<section class="portada" aria-labelledby="titulo-inicio">
+    <h1 id="titulo-inicio">Tecnología para tu día a día</h1>
     <p class="lead">Consolas, notebooks, periféricos y accesorios.</p>
     <a href="catalogo" class="btn btn-primary btn-lg">Ver catálogo</a>
 </section>
+
+<AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+@if (cargando)
+{
+        <div class="text-center py-5" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+}
+else
+{
+        <section class="mb-4" aria-labelledby="titulo-categorias">
+            <h2 id="titulo-categorias" class="h4 mb-3">Categorías</h2>
+
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+            @foreach (var categoria in categorias)
+            {
+                        <div class="col" @key="categoria.Id">
+                            <a href="catalogo?categoria=@categoria.Id" class="tarjeta-categoria">
+                                <i class="bi @Formato.IconoCategoria(categoria.Nombre)" aria-hidden="true"></i>
+                                <span>@categoria.Nombre</span>
+                            </a>
+                        </div>
+            }
+            </div>
+        </section>
+
+        <section aria-labelledby="titulo-recientes">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h2 id="titulo-recientes" class="h4 mb-0">Últimos productos</h2>
+                <a href="catalogo">Ver todo</a>
+            </div>
+
+        @if (recientes.Count == 0)
+        {
+                    <div class="alert alert-info" role="status">Todavía no hay productos disponibles.</div>
+        }
+        else
+        {
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+                @foreach (var producto in recientes)
+                {
+                                <div class="col" @key="producto.Id">
+                                    <ProductoCard Producto="producto" />
+                                </div>
+                }
+                    </div>
+        }
+        </section>
+}
+
+@code {
+    private const int CantidadRecientes = 4;
+
+    private List<Categoria> categorias = new();
+    private List<Producto> recientes = new();
+    private bool cargando = true;
+    private string? mensajeError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categorias = await CategoriaServicio.ObtenerTodas();
+            recientes = await ProductoServicio.ObtenerRecientes(CantidadRecientes);
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudo cargar la portada. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void CerrarError() => mensajeError = null;
+}
