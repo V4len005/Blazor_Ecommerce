@@ -1,0 +1,30 @@
+﻿.imagen-detalle {
+    --tamanio-icono: 8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 320px;
+    overflow: hidden;
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+}
+
+.precio {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-texto);
+}
+
+.ficha dt {
+    font-weight: 600;
+}
+
+.ficha dd {
+    margin-bottom: 0.75rem;
+    color: var(--color-texto-suave);
+}
+
+.breadcrumb-item.active {
+    color: var(--color-texto-suave);
+}
