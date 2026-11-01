@@ -1,0 +1,19 @@
+﻿<span class="badge @Clase">@Texto</span>
+
+@code {
+    /// <summary>Unidades disponibles actualmente.</summary>
+    [Parameter] public int StockActual { get; set; }
+
+    /// <summary>Umbral por debajo (o igual) del cual se avisa stock bajo.</summary>
+    [Parameter] public int StockMinimo { get; set; }
+
+    private string Texto =>
+        StockActual <= 0 ? "Sin stock" :
+        StockActual <= StockMinimo ? "Stock bajo" :
+        "Stock OK";
+
+    private string Clase =>
+        StockActual <= 0 ? "bg-danger" :
+        StockActual <= StockMinimo ? "bg-warning text-dark" :
+        "bg-success";
+}
