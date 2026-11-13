@@ -6,6 +6,9 @@
 <section aria-labelledby="titulo-stock">
     <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h1 id="titulo-stock" class="h3 mb-0">Stock</h1>
+        <a href="admin/stock/historial" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history" aria-hidden="true"></i> Historial
+        </a>
     </header>
 
     <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
@@ -80,11 +83,17 @@
                                             <td class="text-center">@p.StockActual</td>
                                             <td class="text-center d-none d-md-table-cell">@p.StockMinimo</td>
                                             <td><BadgeStock StockActual="p.StockActual" StockMinimo="p.StockMinimo" /></td>
-                                            <td class="text-end">
-                                                <a href="admin/stock/@p.Id/movimiento" class="btn btn-sm btn-outline-primary"
-                                                   aria-label="Registrar movimiento de @p.Nombre" title="Registrar movimiento">
-                                                    <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-                                                </a>
+                                            <td>
+                                                <div class="d-flex justify-content-end gap-1">
+                                                    <a href="admin/stock/@p.Id/movimiento" class="btn btn-sm btn-outline-primary"
+                                                       aria-label="Registrar movimiento de @p.Nombre" title="Registrar movimiento">
+                                                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                                                    </a>
+                                                    <a href="admin/stock/historial?producto=@p.Id" class="btn btn-sm btn-outline-secondary"
+                                                       aria-label="Ver historial de @p.Nombre" title="Ver historial">
+                                                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                         }
