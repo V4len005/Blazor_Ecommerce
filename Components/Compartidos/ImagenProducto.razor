@@ -1,0 +1,13 @@
+﻿@if (!string.IsNullOrWhiteSpace(Producto.ImagenUrl))
+{
+        <img src="@Producto.ImagenUrl" alt="@Producto.Nombre" loading="lazy" />
+}
+else
+{
+        <i class="bi @Formato.IconoCategoria(Producto.Categoria?.Nombre) icono" aria-hidden="true"></i>
+}
+
+@code {
+    /// <summary>Producto cuya imagen se muestra. Si no tiene URL, se dibuja el ícono de su categoría.</summary>
+    [Parameter, EditorRequired] public Producto Producto { get; set; } = default!;
+}

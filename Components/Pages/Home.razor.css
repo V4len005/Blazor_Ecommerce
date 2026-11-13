@@ -1,0 +1,40 @@
+﻿.portada {
+    padding: 2.5rem 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+}
+
+.tarjeta-categoria {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 1rem 0.5rem;
+    color: var(--color-texto);
+    text-align: center;
+    text-decoration: none;
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+    .tarjeta-categoria:hover {
+        color: var(--color-primario);
+        border-color: var(--color-primario);
+    }
+
+    .tarjeta-categoria i {
+        font-size: 2rem;
+        color: var(--color-primario);
+    }
+
+@media (prefers-reduced-motion: reduce) {
+    .tarjeta-categoria {
+        transition: none;
+    }
+}

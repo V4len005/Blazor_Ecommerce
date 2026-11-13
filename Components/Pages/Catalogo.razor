@@ -1,0 +1,170 @@
+﻿@page "/catalogo"
+@inject IProductoService ProductoServicio
+@inject ICategoriaService CategoriaServicio
+@inject NavigationManager Navegacion
+
+<PageTitle>Catálogo | TechStore</PageTitle>
+
+<section aria-labelledby="titulo-catalogo">
+    <header class="mb-3">
+        <h1 id="titulo-catalogo" class="h3">Catálogo</h1>
+
+        @if (!string.IsNullOrWhiteSpace(Busqueda))
+        {
+                <a href="@Enlace(CategoriaId, null, conBusqueda: false)" class="btn btn-sm btn-outline-secondary">
+                    Búsqueda: "@Busqueda" <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Quitar búsqueda</span>
+                </a>
+        }
+    </header>
+
+    <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+    <nav aria-label="Filtrar por categoría" class="mb-3">
+        <ul class="nav nav-pills flex-nowrap categorias">
+            <li class="nav-item">
+                <a class="nav-link @(CategoriaId is null ? "active" : "")"
+                   href="@Enlace(null, null)"
+                   aria-current="@(CategoriaId is null ? "true" : null)">Todas</a>
+            </li>
+
+            @foreach (var categoria in categorias)
+            {
+                    <li class="nav-item">
+                        <a class="nav-link @(CategoriaId == categoria.Id ? "active" : "")"
+                           href="@Enlace(categoria.Id, null)"
+                           aria-current="@(CategoriaId == categoria.Id ? "true" : null)">@categoria.Nombre</a>
+                    </li>
+            }
+        </ul>
+    </nav>
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando productos...</span>
+            </div>
+    }
+    else
+    {
+            <p class="text-muted small mb-2" role="status" aria-live="polite">
+            @resultado.TotalRegistros producto(s) encontrado(s)
+            </p>
+
+        @if (resultado.Items.Count == 0)
+        {
+                    <div class="alert alert-info" role="status">
+                        No encontramos productos con esos filtros.
+                        <a href="catalogo" class="alert-link">Ver todo el catálogo</a>
+                    </div>
+        }
+        else
+        {
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
+                @foreach (var producto in resultado.Items)
+                {
+                                <div class="col" @key="producto.Id">
+                                    <ProductoCard Producto="producto" />
+                                </div>
+                }
+                    </div>
+
+                    <div class="mt-4">
+                        <Paginacion PaginaActual="resultado.Pagina"
+                                    TotalPaginas="resultado.TotalPaginas"
+                                    OnCambio="CambiarPagina" />
+                    </div>
+        }
+    }
+</section>
+
+@code {
+    private const int TamanioPagina = 8;
+
+    /// <summary>Texto buscado, tomado de la URL (?busqueda=...).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "busqueda")]
+    public string? Busqueda { get; set; }
+
+    /// <summary>Categoría elegida, tomada de la URL (?categoria=...).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "categoria")]
+    public int? CategoriaId { get; set; }
+
+    /// <summary>Página pedida, tomada de la URL (?pagina=...).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "pagina")]
+    public int? Pagina { get; set; }
+
+    private ResultadoPaginado<Producto> resultado = new();
+    private List<Categoria> categorias = new();
+
+    private bool cargando = true;
+    private string? mensajeError;
+    private string? claveCargada;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita consultar de nuevo si la URL no cambió.
+        var clave = $"{Busqueda}|{CategoriaId}|{Pagina}";
+
+        if (clave == claveCargada)
+        {
+            return;
+        }
+
+        claveCargada = clave;
+
+        await CargarCategorias();
+        await CargarProductos();
+    }
+
+    private async Task CargarCategorias()
+    {
+        if (categorias.Count > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            categorias = await CategoriaServicio.ObtenerTodas();
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar las categorías.";
+        }
+    }
+
+    private async Task CargarProductos()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            resultado = await ProductoServicio.ObtenerPaginado(
+                Busqueda, CategoriaId, Pagina ?? 1, TamanioPagina, soloActivos: true);
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar los productos. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // Arma la URL del catálogo con los filtros indicados. Un valor null quita ese parámetro.
+    private string Enlace(int? categoria, int? pagina, bool conBusqueda = true) =>
+        Navegacion.GetUriWithQueryParameters(new Dictionary<string, object?>
+            {
+                ["busqueda"] = conBusqueda && !string.IsNullOrWhiteSpace(Busqueda) ? Busqueda : null,
+                ["categoria"] = categoria,
+                ["pagina"] = pagina
+            });
+
+    private void CambiarPagina(int nuevaPagina) =>
+        Navegacion.NavigateTo(Enlace(CategoriaId, nuevaPagina == 1 ? null : nuevaPagina));
+
+    private void CerrarError() => mensajeError = null;
+}
