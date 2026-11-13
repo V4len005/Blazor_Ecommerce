@@ -16,6 +16,7 @@ builder.Services.AddDbContextFactory<TiendaDbContext>(opciones =>
 // Servicios de datos: una instancia por circuito (conexión del usuario).
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IStockService, StockService>();
 
 var app = builder.Build();
 

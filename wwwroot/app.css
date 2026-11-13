@@ -142,3 +142,22 @@ body.dark-mode .validation-message {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+/* ===== Tablas de administración (compartidas por Productos, Stock y Pedidos) ===== */
+.contenedor-tabla {
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+}
+
+.tabla-admin {
+    margin-bottom: 0;
+}
+
+    .tabla-admin th,
+    .tabla-admin td {
+        color: var(--color-texto);
+        background-color: transparent;
+        border-color: var(--color-borde);
+        box-shadow: none;
+    }
