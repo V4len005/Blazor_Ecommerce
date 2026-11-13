@@ -1,0 +1,248 @@
+﻿@page "/admin/stock/{ProductoId:int}/movimiento"
+@inject IProductoService ProductoServicio
+@inject IStockService StockServicio
+@inject NavigationManager Navegacion
+
+<PageTitle>Registrar movimiento | Administración</PageTitle>
+
+<section class="formulario" aria-labelledby="titulo-movimiento">
+    <header class="mb-3">
+        <a href="admin/stock" class="small">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al stock
+        </a>
+        <h1 id="titulo-movimiento" class="h3 mt-2">Registrar movimiento de stock</h1>
+    </header>
+
+    <AlertError Mensaje="@errorCarga" OnCerrar="CerrarErrorCarga" />
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando producto...</span>
+            </div>
+    }
+    else if (productoNoEncontrado)
+    {
+            <div class="alert alert-warning" role="status">
+                No encontramos el producto. Puede haber sido eliminado.
+            </div>
+    }
+    else if (errorCarga is null)
+    {
+            <section class="card card-body mb-3" aria-label="Producto seleccionado">
+                <div class="fw-semibold">@producto.Nombre</div>
+                <div class="small text-muted">
+                @producto.Marca@(string.IsNullOrWhiteSpace(producto.Sku) ? "" : $" · {producto.Sku}")
+                </div>
+                <div class="mt-2 d-flex flex-wrap align-items-center gap-2">
+                    <span>Stock actual: <strong>@producto.StockActual</strong></span>
+                    <span class="text-muted">Mínimo: @producto.StockMinimo</span>
+                    <BadgeStock StockActual="producto.StockActual" StockMinimo="producto.StockMinimo" />
+                </div>
+            </section>
+
+            <EditForm Model="modelo" OnValidSubmit="Guardar">
+                <DataAnnotationsValidator />
+
+                <fieldset class="card card-body mb-3">
+                    <legend>Movimiento</legend>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="operacion" class="form-label">Operación</label>
+                            <InputSelect id="operacion" class="form-select" @bind-Value="modelo.Operacion">
+                                <option value="@OperacionStock.Entrada">Entrada por compra</option>
+                                <option value="@OperacionStock.Merma">Salida por merma</option>
+                                <option value="@OperacionStock.Ajuste">Ajuste por conteo real</option>
+                            </InputSelect>
+                        </div>
+
+                    @if (modelo.Operacion == OperacionStock.Ajuste)
+                    {
+                                <div class="col-12 col-md-6">
+                                    <label for="stock-real" class="form-label">Stock real contado</label>
+                                    <InputNumber id="stock-real" class="form-control" aria-describedby="ayuda-real"
+                                                 ParsingErrorMessage="Ingresá un número entero."
+                                                 @bind-Value="modelo.StockReal" />
+                                    <div id="ayuda-real" class="form-text">
+                                        Contá las unidades que hay en el depósito y escribí el total.
+                                    </div>
+                                    <ValidationMessage For="() => modelo.StockReal" />
+                                </div>
+                    }
+                    else
+                    {
+                                <div class="col-12 col-md-6">
+                                    <label for="cantidad" class="form-label">Cantidad</label>
+                                    <InputNumber id="cantidad" class="form-control"
+                                                 ParsingErrorMessage="Ingresá un número entero."
+                                                 @bind-Value="modelo.Cantidad" />
+                                    <ValidationMessage For="() => modelo.Cantidad" />
+                                </div>
+                    }
+
+                        <div class="col-12">
+                            <label for="observacion" class="form-label">
+                                Observación <span class="text-muted small">(opcional)</span>
+                            </label>
+                            <InputText id="observacion" class="form-control"
+                                       placeholder="Ej.: Factura A-0001 del proveedor"
+                                       @bind-Value="modelo.Observacion" />
+                            <ValidationMessage For="() => modelo.Observacion" />
+                        </div>
+                    </div>
+
+                @if (StockResultante is int resultante)
+                {
+                            <p class="mt-3 mb-0" role="status" aria-live="polite">
+                                Stock después del movimiento:
+                                <strong class="@(resultante < 0 ? "text-danger" : "")">@resultante</strong>
+                            </p>
+                }
+                </fieldset>
+
+                <AlertError Mensaje="@errorGuardado" OnCerrar="CerrarErrorGuardado" />
+
+                <div class="acciones">
+                    <a href="admin/stock" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary" disabled="@guardando">
+                    @if (guardando)
+                    {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Guardando...</span>
+                    }
+                    else
+                    {
+                                <i class="bi bi-check-lg" aria-hidden="true"></i>
+                                <span>Registrar</span>
+                    }
+                    </button>
+                </div>
+            </EditForm>
+    }
+</section>
+
+@code {
+    /// <summary>Identificador del producto, tomado de la ruta.</summary>
+    [Parameter] public int ProductoId { get; set; }
+
+    private Producto producto = new();
+    private MovimientoFormulario modelo = new();
+
+    private int? idCargado;
+    private bool cargando = true;
+    private bool guardando;
+    private bool productoNoEncontrado;
+    private string? errorCarga;
+    private string? errorGuardado;
+
+    // Vista previa del stock que quedaría; null si todavía faltan datos válidos.
+    private int? StockResultante => modelo.Operacion switch
+    {
+        OperacionStock.Entrada when modelo.Cantidad is > 0 => producto.StockActual + modelo.Cantidad,
+        OperacionStock.Merma when modelo.Cantidad is > 0 => producto.StockActual - modelo.Cantidad,
+        OperacionStock.Ajuste when modelo.StockReal is >= 0 => modelo.StockReal,
+        _ => null
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita recargar (y perder lo escrito) si el Id no cambió.
+        if (idCargado == ProductoId)
+        {
+            return;
+        }
+
+        idCargado = ProductoId;
+        cargando = true;
+        productoNoEncontrado = false;
+        errorCarga = null;
+        errorGuardado = null;
+        modelo = new MovimientoFormulario();
+
+        try
+        {
+            var encontrado = await ProductoServicio.ObtenerPorId(ProductoId);
+
+            if (encontrado is null)
+            {
+                productoNoEncontrado = true;
+            }
+            else
+            {
+                producto = encontrado;
+                modelo.StockActual = encontrado.StockActual;
+            }
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudo cargar el producto. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Guardar()
+    {
+        guardando = true;
+        errorGuardado = null;
+
+        try
+        {
+            switch (modelo.Operacion)
+            {
+                case OperacionStock.Entrada:
+                    await StockServicio.RegistrarEntrada(ProductoId, modelo.Cantidad!.Value, modelo.Observacion);
+                    break;
+
+                case OperacionStock.Merma:
+                    await StockServicio.RegistrarMerma(ProductoId, modelo.Cantidad!.Value, modelo.Observacion);
+                    break;
+
+                default:
+                    await StockServicio.AjustarStock(ProductoId, modelo.StockReal!.Value, modelo.Observacion);
+                    break;
+            }
+
+            Navegacion.NavigateTo($"admin/stock/historial?producto={ProductoId}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorGuardado = ex.Message;
+            await RefrescarStock();
+        }
+        catch (Exception)
+        {
+            errorGuardado = "No se pudo registrar el movimiento. Intentá de nuevo.";
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    // Si el servidor rechazó la operación, el stock que se ve puede estar desactualizado: se vuelve a leer.
+    private async Task RefrescarStock()
+    {
+        try
+        {
+            var actual = await ProductoServicio.ObtenerPorId(ProductoId);
+
+            if (actual is not null)
+            {
+                producto = actual;
+                modelo.StockActual = actual.StockActual;
+            }
+        }
+        catch (Exception)
+        {
+            // Si falla la relectura, se conserva el mensaje de error original.
+        }
+    }
+
+    private void CerrarErrorCarga() => errorCarga = null;
+
+    private void CerrarErrorGuardado() => errorGuardado = null;
+}
