@@ -34,17 +34,6 @@ public static class AplicadorStock
                 : "La cantidad debe ser mayor a 0.");
         }
 
-        var variacion = tipo == TipoMovimiento.Salida ? -cantidad : cantidad;
-        var nuevoStock = producto.StockActual + variacion;
-
-        if (nuevoStock < 0)
-        {
-            throw new InvalidOperationException(
-                $"Stock insuficiente de \"{producto.Nombre}\": hay {producto.StockActual} unidad(es) y el movimiento pide {Math.Abs(variacion)}.");
-        }
-
-        producto.StockActual = nuevoStock;
-
         var movimiento = new MovimientoStock
         {
             ProductoId = producto.Id,
@@ -55,6 +44,15 @@ public static class AplicadorStock
             Observacion = observacion
         };
 
+        var nuevoStock = producto.StockActual + movimiento.Variacion;
+
+        if (nuevoStock < 0)
+        {
+            throw new InvalidOperationException(
+                $"Stock insuficiente de \"{producto.Nombre}\": hay {producto.StockActual} unidad(es) y el movimiento pide {Math.Abs(movimiento.Variacion)}.");
+        }
+
+        producto.StockActual = nuevoStock;
         contexto.MovimientosStock.Add(movimiento);
 
         return movimiento;
