@@ -22,4 +22,27 @@ public interface IPedidoService
     /// <param name="id">Identificador del pedido.</param>
     /// <returns>El pedido, o null si no existe.</returns>
     Task<Pedido?> ObtenerPorId(int id);
+
+    /// <summary>Obtiene una página de pedidos, del más reciente al más antiguo, con filtros opcionales.</summary>
+    /// <param name="estado">Si tiene valor, solo pedidos en ese estado.</param>
+    /// <param name="busqueda">Texto a buscar en el nombre o email del cliente, o un número de pedido (puede ser nulo).</param>
+    /// <param name="pagina">Número de página pedido (empieza en 1; se ajusta si queda fuera de rango).</param>
+    /// <param name="tamanioPagina">Cantidad de pedidos por página.</param>
+    /// <returns>La página de pedidos con sus ítems cargados y los totales.</returns>
+    Task<ResultadoPaginado<Pedido>> ObtenerPaginado(
+        EstadoPedido? estado, string? busqueda, int pagina, int tamanioPagina);
+
+    /// <summary>
+    /// Cambia el estado de un pedido respetando las transiciones permitidas. Si el nuevo estado
+    /// es Cancelado, devuelve el stock de cada producto con un movimiento de Entrada por
+    /// Cancelación, en la misma transacción que el cambio de estado.
+    /// </summary>
+    /// <param name="pedidoId">Pedido a modificar.</param>
+    /// <param name="nuevoEstado">Estado al que debe pasar.</param>
+    /// <returns>El pedido con su nuevo estado.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Si el pedido no existe, la transición no está permitida o el pedido
+    /// (o su stock) cambió mientras se operaba.
+    /// </exception>
+    Task<Pedido> CambiarEstado(int pedidoId, EstadoPedido nuevoEstado);
 }

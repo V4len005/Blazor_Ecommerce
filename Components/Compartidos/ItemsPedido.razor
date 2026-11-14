@@ -1,0 +1,35 @@
+﻿<div class="table-responsive contenedor-tabla">
+    <table class="table tabla-admin align-middle">
+        <caption class="visually-hidden">Productos del pedido</caption>
+        <thead>
+            <tr>
+                <th scope="col">Producto</th>
+                <th scope="col" class="text-center">Cant.</th>
+                <th scope="col" class="text-end d-none d-sm-table-cell">Precio</th>
+                <th scope="col" class="text-end">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Pedido.Items)
+            {
+                    <tr @key="item.Id">
+                        <td>@(item.Producto?.Nombre ?? "Producto eliminado")</td>
+                        <td class="text-center">@item.Cantidad</td>
+                        <td class="text-end text-nowrap d-none d-sm-table-cell">@Formato.Precio(item.PrecioUnitario)</td>
+                        <td class="text-end text-nowrap">@Formato.Precio(item.Subtotal)</td>
+                    </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <th scope="row" colspan="3" class="text-end">Total</th>
+                <td class="text-end text-nowrap fw-bold">@Formato.Precio(Pedido.Total)</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@code {
+    /// <summary>Pedido cuyos productos se muestran. Lo entrega el componente padre mediante un CascadingValue llamado "Pedido".</summary>
+    [CascadingParameter(Name = "Pedido")] public Pedido Pedido { get; set; } = default!;
+}

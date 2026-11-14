@@ -1,0 +1,9 @@
+﻿.datos dt {
+    font-weight: 600;
+}
+
+.datos dd {
+    margin-bottom: 0.75rem;
+    color: var(--color-texto-suave);
+    overflow-wrap: anywhere;
+}

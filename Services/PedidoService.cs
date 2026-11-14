@@ -95,6 +95,123 @@ public class PedidoService : IPedidoService
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
+    public async Task<ResultadoPaginado<Pedido>> ObtenerPaginado(
+        EstadoPedido? estado, string? busqueda, int pagina, int tamanioPagina)
+    {
+        await using var contexto = await _fabrica.CreateDbContextAsync();
+
+        IQueryable<Pedido> consulta = contexto.Pedidos.AsNoTracking();
+
+        if (estado.HasValue)
+        {
+            consulta = consulta.Where(p => p.Estado == estado.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(busqueda))
+        {
+            var texto = busqueda.Trim();
+            var patron = $"%{TextoSql.EscaparLike(texto)}%";
+
+            // "#12" o "12" también buscan el pedido número 12.
+            var hayNumero = int.TryParse(texto.TrimStart('#'), out var numero);
+
+            consulta = consulta.Where(p =>
+                EF.Functions.Like(p.NombreCliente, patron) ||
+                EF.Functions.Like(p.Email, patron) ||
+                (hayNumero && p.Id == numero));
+        }
+
+        var total = await consulta.CountAsync();
+
+        var tamanio = Math.Max(1, tamanioPagina);
+        var totalPaginas = Math.Max(1, (int)Math.Ceiling(total / (double)tamanio));
+        var paginaValida = Math.Clamp(pagina, 1, totalPaginas);
+
+        var items = await consulta
+            .Include(p => p.Items)
+            .OrderByDescending(p => p.Fecha)
+            .ThenByDescending(p => p.Id)
+            .Skip((paginaValida - 1) * tamanio)
+            .Take(tamanio)
+            .ToListAsync();
+
+        return new ResultadoPaginado<Pedido>
+        {
+            Items = items,
+            TotalRegistros = total,
+            Pagina = paginaValida,
+            TamanioPagina = tamanio
+        };
+    }
+
+    public async Task<Pedido> CambiarEstado(int pedidoId, EstadoPedido nuevoEstado)
+    {
+        await using var contexto = await _fabrica.CreateDbContextAsync();
+
+        // Con seguimiento activo: el estado (y, al cancelar, el stock) van a cambiar.
+        var pedido = await contexto.Pedidos
+            .Include(p => p.Items)
+            .FirstOrDefaultAsync(p => p.Id == pedidoId);
+
+        if (pedido is null)
+        {
+            throw new InvalidOperationException("El pedido no existe.");
+        }
+
+        if (!pedido.Estado.PuedePasarA(nuevoEstado))
+        {
+            throw new InvalidOperationException(
+                $"Un pedido en estado {pedido.Estado} no puede pasar a {nuevoEstado}.");
+        }
+
+        if (nuevoEstado == EstadoPedido.Cancelado)
+        {
+            await DevolverStock(contexto, pedido);
+        }
+
+        pedido.Estado = nuevoEstado;
+
+        try
+        {
+            // El nuevo estado, el stock devuelto y sus movimientos se guardan en una sola transacción.
+            await contexto.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new InvalidOperationException(
+                "El pedido (o el stock de sus productos) cambió mientras operabas. Actualizá la pantalla y revisá su estado.", ex);
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new InvalidOperationException(
+                "No se pudo cambiar el estado del pedido. Intentá de nuevo en unos minutos.", ex);
+        }
+
+        return pedido;
+    }
+
+    // Suma al stock de cada producto las unidades del pedido y registra un movimiento por cada uno.
+    private static async Task DevolverStock(TiendaDbContext contexto, Pedido pedido)
+    {
+        var ids = pedido.Items.Select(i => i.ProductoId).Distinct().ToList();
+        var productos = await contexto.Productos
+            .Where(p => ids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        foreach (var item in pedido.Items)
+        {
+            if (!productos.TryGetValue(item.ProductoId, out var producto))
+            {
+                throw new InvalidOperationException(
+                    "No se pudo devolver el stock porque un producto del pedido ya no existe.");
+            }
+
+            AplicadorStock.Aplicar(
+                contexto, producto, TipoMovimiento.Entrada, MotivoMovimiento.Cancelacion,
+                item.Cantidad, $"Cancelación del pedido #{pedido.Id}", pedido);
+        }
+    }
+
     // Une las líneas repetidas del mismo producto y descarta cantidades inválidas.
     private static List<LineaPedido> Consolidar(IReadOnlyList<LineaPedido>? lineas)
     {
