@@ -83,7 +83,7 @@ public class TiendaJs : IAsyncDisposable
     {
         if (_carga is null || _carga.IsFaulted || _carga.IsCanceled)
         {
-            _carga = _js.InvokeAsync<IJSObjectReference>("import", "./js/tienda.js").AsTask();
+            _carga = _js.InvokeAsync<IJSObjectReference>("import", $"./js/tienda.js?v={VersionApp.Valor}").AsTask();
         }
 
         return _carga;

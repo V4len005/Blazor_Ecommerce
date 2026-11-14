@@ -1,4 +1,5 @@
 ﻿@page "/carrito"
+@implements IDisposable
 @inject CarritoState CarritoEstado
 
 <PageTitle>Carrito | ValTech</PageTitle>
@@ -111,6 +112,12 @@
                OnCancelar="CancelarVaciar" />
 
 @code {
+    protected override void OnInitialized() => CarritoEstado.OnChange += Actualizar;
+
+    // El carrito se restaura de forma asíncrona después del primer dibujo: la página debe redibujarse cuando eso pasa.
+    private void Actualizar() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CarritoEstado.OnChange -= Actualizar;
     private string? mensajeError;
     private bool confirmarVaciar;
 
