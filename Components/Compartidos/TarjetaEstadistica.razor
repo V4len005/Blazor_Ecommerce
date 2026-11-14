@@ -1,0 +1,32 @@
+﻿<article class="card tarjeta h-100 @(Resaltar ? "resaltada" : "")">
+    <div class="card-body d-flex align-items-center gap-3">
+        <i class="bi @Icono icono" aria-hidden="true"></i>
+
+        <div>
+            <p class="titulo mb-0">@Titulo</p>
+            <p class="valor mb-0">@Valor</p>
+
+            @if (!string.IsNullOrWhiteSpace(Detalle))
+            {
+                    <p class="detalle small mb-0">@Detalle</p>
+            }
+        </div>
+    </div>
+</article>
+
+@code {
+    /// <summary>Nombre del dato, por ejemplo "Pedidos de hoy".</summary>
+    [Parameter, EditorRequired] public string Titulo { get; set; } = string.Empty;
+
+    /// <summary>Valor principal, ya formateado como texto.</summary>
+    [Parameter, EditorRequired] public string Valor { get; set; } = string.Empty;
+
+    /// <summary>Texto auxiliar debajo del valor (opcional).</summary>
+    [Parameter] public string? Detalle { get; set; }
+
+    /// <summary>Clase de Bootstrap Icons, por ejemplo "bi-receipt".</summary>
+    [Parameter] public string Icono { get; set; } = "bi-graph-up";
+
+    /// <summary>Si es true, la tarjeta se destaca (por ejemplo, para avisar algo que requiere atención).</summary>
+    [Parameter] public bool Resaltar { get; set; }
+}

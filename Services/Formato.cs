@@ -37,6 +37,16 @@ public static class Formato
         return TimeZoneInfo.ConvertTimeFromUtc(utc, ZonaArgentina).ToString("dd/MM/yyyy HH:mm", Cultura);
     }
 
+    /// <summary>Calcula a qué momento UTC corresponde la medianoche de hoy en Argentina.</summary>
+    /// <returns>El inicio del día actual argentino, expresado en UTC (sirve para comparar con las fechas guardadas).</returns>
+    public static DateTime InicioDelDiaUtc()
+    {
+        var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZonaArgentina);
+        var medianocheLocal = DateTime.SpecifyKind(ahoraLocal.Date, DateTimeKind.Unspecified);
+
+        return TimeZoneInfo.ConvertTimeToUtc(medianocheLocal, ZonaArgentina);
+    }
+
     /// <summary>Devuelve el nombre legible de un motivo de movimiento (con tilde donde corresponde).</summary>
     /// <param name="motivo">Motivo del movimiento.</param>
     /// <returns>El texto para mostrar en pantalla.</returns>

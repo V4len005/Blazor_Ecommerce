@@ -1,7 +1,192 @@
 ﻿@page "/admin"
-@layout AdminLayout
+@inject IEstadisticaService EstadisticaServicio
 
 <PageTitle>Administración | ValTech</PageTitle>
 
-<h1 class="h3">Panel de administración</h1>
-<p class="text-muted">Acá van a aparecer las estadísticas de la tienda.</p>
+<section aria-labelledby="titulo-panel">
+    <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h1 id="titulo-panel" class="h3 mb-0">Panel de administración</h1>
+
+        <button type="button" class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualizar
+        </button>
+    </header>
+
+    <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+    @if (cargando && datos is null)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando estadísticas...</span>
+            </div>
+    }
+    else if (datos is not null)
+    {
+            <p class="text-muted small" aria-live="polite">Datos al @Formato.FechaHora(actualizadoUtc)</p>
+
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+                <div class="col">
+                    <TarjetaEstadistica Titulo="Productos activos"
+                                        Valor="@datos.ProductosActivos.ToString()"
+                                        Detalle="@($"{datos.ProductosTotales} en total")"
+                                        Icono="bi-box-seam" />
+                </div>
+                <div class="col">
+                    <TarjetaEstadistica Titulo="Stock bajo"
+                                        Valor="@datos.ProductosStockBajo.ToString()"
+                                        Detalle="Incluye productos agotados"
+                                        Icono="bi-exclamation-triangle"
+                                        Resaltar="@(datos.ProductosStockBajo > 0)" />
+                </div>
+                <div class="col">
+                    <TarjetaEstadistica Titulo="Pedidos de hoy"
+                                        Valor="@datos.PedidosHoy.ToString()"
+                                        Detalle="Sin contar cancelados"
+                                        Icono="bi-receipt" />
+                </div>
+                <div class="col">
+                    <TarjetaEstadistica Titulo="Total vendido"
+                                        Valor="@Formato.Precio(datos.TotalVendido)"
+                                        Detalle="Sin contar cancelados"
+                                        Icono="bi-cash-coin" />
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-12 col-lg-7">
+                    <section class="card card-body mb-4" aria-labelledby="titulo-vendidos">
+                        <h2 id="titulo-vendidos" class="h5">Productos más vendidos</h2>
+
+                    @if (datos.MasVendidos.Count == 0)
+                    {
+                                <p class="text-muted mb-0">Todavía no hay ventas registradas.</p>
+                    }
+                    else
+                    {
+                                <div class="table-responsive">
+                                    <table class="table tabla-admin align-middle mb-0">
+                                        <caption class="visually-hidden">Productos más vendidos</caption>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Producto</th>
+                                                <th scope="col" class="text-end">Unidades</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                    @for (var i = 0; i < datos.MasVendidos.Count; i++)
+                                    {
+                                        var vendido = datos.MasVendidos[i];
+
+                                                    <tr @key="vendido.ProductoId">
+                                                        <td>
+                                                @vendido.Nombre
+                                                @if (i == 0)
+                                                {
+                                                                    <span class="badge bg-success ms-1">Más vendido</span>
+                                                }
+                                                        </td>
+                                                        <td class="text-end fw-semibold">@vendido.Unidades</td>
+                                                    </tr>
+                                    }
+                                        </tbody>
+                                    </table>
+                                </div>
+                    }
+                    </section>
+
+                    <section class="card card-body" aria-labelledby="titulo-estados">
+                        <h2 id="titulo-estados" class="h5">Pedidos por estado</h2>
+
+                        <ul class="lista">
+                        @foreach (var conteo in datos.PedidosPorEstado)
+                        {
+                                    <li class="elemento" @key="conteo.Estado">
+                                        <a href="admin/pedidos?estado=@conteo.Estado"
+                                           aria-label="Ver los pedidos en estado @conteo.Estado">
+                                            <span class="badge @Formato.ClaseEstado(conteo.Estado)">@conteo.Estado</span>
+                                        </a>
+                                        <strong>@conteo.Cantidad</strong>
+                                    </li>
+                        }
+                        </ul>
+                    </section>
+                </div>
+
+                <div class="col-12 col-lg-5">
+                    <section class="card card-body" aria-labelledby="titulo-stock-bajo">
+                        <h2 id="titulo-stock-bajo" class="h5">Productos con stock bajo</h2>
+
+                    @if (datos.StockBajo.Count == 0)
+                    {
+                                <p class="text-muted mb-0">No hay productos con stock bajo.</p>
+                    }
+                    else
+                    {
+                                <ul class="lista">
+                            @foreach (var producto in datos.StockBajo)
+                            {
+                                            <li class="elemento" @key="producto.ProductoId">
+                                                <div>
+                                                    <div class="fw-semibold">@producto.Nombre</div>
+                                                    <div class="small text-muted">
+                                            @producto.StockActual unidad(es), mínimo @producto.StockMinimo
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <BadgeStock StockActual="producto.StockActual" StockMinimo="producto.StockMinimo" />
+                                                    <a href="admin/stock/@producto.ProductoId/movimiento"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       aria-label="Registrar movimiento de @producto.Nombre"
+                                                       title="Registrar movimiento">
+                                                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                                                    </a>
+                                                </div>
+                                            </li>
+                            }
+                                </ul>
+
+                        @if (datos.ProductosStockBajo > datos.StockBajo.Count)
+                        {
+                                        <a href="admin/stock" class="small">
+                                            Ver los @datos.ProductosStockBajo productos con stock bajo
+                                        </a>
+                        }
+                    }
+                    </section>
+                </div>
+            </div>
+    }
+</section>
+
+@code {
+    private EstadisticasPanel? datos;
+    private DateTime actualizadoUtc;
+    private bool cargando = true;
+    private string? mensajeError;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            datos = await EstadisticaServicio.ObtenerPanel();
+            actualizadoUtc = DateTime.UtcNow;
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar las estadísticas. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void CerrarError() => mensajeError = null;
+}
