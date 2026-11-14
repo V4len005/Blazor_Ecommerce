@@ -56,6 +56,33 @@ public static class Formato
     public static string Variacion(int variacion) =>
         variacion > 0 ? $"+{variacion}" : variacion.ToString(CultureInfo.InvariantCulture);
 
+    /// <summary>Oculta la mayor parte de un email, por ejemplo "juan@correo.com" pasa a "j***@correo.com".</summary>
+    /// <param name="email">Dirección de correo.</param>
+    /// <returns>El email enmascarado; si no tiene un formato reconocible, "***".</returns>
+    public static string EmailEnmascarado(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "***";
+        }
+
+        var arroba = email.IndexOf('@');
+
+        return arroba <= 0 ? "***" : $"{email[0]}***{email[arroba..]}";
+    }
+
+    /// <summary>Devuelve la clase de Bootstrap con el color del estado de un pedido.</summary>
+    /// <param name="estado">Estado del pedido.</param>
+    /// <returns>Una o más clases para un badge, por ejemplo "bg-success".</returns>
+    public static string ClaseEstado(EstadoPedido estado) => estado switch
+    {
+        EstadoPedido.Confirmado => "bg-primary",
+        EstadoPedido.Enviado => "bg-info text-dark",
+        EstadoPedido.Entregado => "bg-success",
+        EstadoPedido.Cancelado => "bg-danger",
+        _ => "bg-secondary"
+    };
+
     // Windows e IANA nombran distinto a la misma zona; se prueban ambos y, si ninguno existe, se usa UTC-3 fijo.
     private static TimeZoneInfo BuscarZonaArgentina()
     {
