@@ -1,0 +1,137 @@
+﻿@page "/pedido/{Id:int}"
+@inject IPedidoService PedidoServicio
+
+<PageTitle>Pedido #@Id | ValTech</PageTitle>
+
+<AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+@if (cargando)
+{
+        <div class="text-center py-5" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <span class="visually-hidden">Cargando pedido...</span>
+        </div>
+}
+else if (pedido is not null)
+{
+        <section aria-labelledby="titulo-pedido">
+            <header class="text-center mb-4">
+                <i class="bi bi-check-circle-fill exito" aria-hidden="true"></i>
+                <h1 id="titulo-pedido" class="h3">¡Gracias por tu compra!</h1>
+                <p class="lead mb-0">Tu pedido <strong>#@pedido.Id</strong> fue confirmado.</p>
+            </header>
+
+            <div class="row g-4">
+                <div class="col-12 col-lg-5">
+                    <article class="card card-body" aria-labelledby="titulo-datos">
+                        <h2 id="titulo-datos" class="h5">Datos del pedido</h2>
+
+                        <dl class="datos mb-0">
+                            <dt>Fecha</dt>
+                            <dd>@Formato.FechaHora(pedido.Fecha)</dd>
+
+                            <dt>Estado</dt>
+                            <dd><span class="badge @Formato.ClaseEstado(pedido.Estado)">@pedido.Estado</span></dd>
+
+                            <dt>Cliente</dt>
+                            <dd>@pedido.NombreCliente</dd>
+
+                            <dt>Email</dt>
+                            <dd>@Formato.EmailEnmascarado(pedido.Email)</dd>
+
+                            <dt>Entrega</dt>
+                            <dd>@(string.IsNullOrWhiteSpace(pedido.DireccionEnvio) ? "Retiro en el local" : "Envío a domicilio")</dd>
+                        </dl>
+                    </article>
+                </div>
+
+                <div class="col-12 col-lg-7">
+                    <div class="table-responsive contenedor-tabla">
+                        <table class="table tabla-admin align-middle">
+                            <caption class="visually-hidden">Productos del pedido</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col" class="text-center">Cant.</th>
+                                    <th scope="col" class="text-end d-none d-sm-table-cell">Precio</th>
+                                    <th scope="col" class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var item in pedido.Items)
+                            {
+                                        <tr @key="item.Id">
+                                            <td>@(item.Producto?.Nombre ?? "Producto eliminado")</td>
+                                            <td class="text-center">@item.Cantidad</td>
+                                            <td class="text-end text-nowrap d-none d-sm-table-cell">@Formato.Precio(item.PrecioUnitario)</td>
+                                            <td class="text-end text-nowrap">@Formato.Precio(item.Subtotal)</td>
+                                        </tr>
+                            }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th scope="row" colspan="3" class="text-end">Total</th>
+                                    <td class="text-end text-nowrap fw-bold">@Formato.Precio(pedido.Total)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <p class="small text-muted mt-2">
+                        Pago simulado: no se realizó ningún cobro. Por privacidad, algunos datos se muestran parcialmente.
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="catalogo" class="btn btn-primary">Seguir comprando</a>
+            </div>
+        </section>
+}
+else if (mensajeError is null)
+{
+        <section class="text-center py-5" aria-labelledby="titulo-no-encontrado">
+            <h1 id="titulo-no-encontrado" class="h3">Pedido no encontrado</h1>
+            <p>No encontramos un pedido con ese número.</p>
+            <a href="catalogo" class="btn btn-primary">Ir al catálogo</a>
+        </section>
+}
+
+@code {
+    /// <summary>Número del pedido, tomado de la ruta.</summary>
+    [Parameter] public int Id { get; set; }
+
+    private Pedido? pedido;
+    private int? idCargado;
+    private bool cargando = true;
+    private string? mensajeError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita consultar de nuevo si el Id no cambió.
+        if (idCargado == Id)
+        {
+            return;
+        }
+
+        idCargado = Id;
+        cargando = true;
+        mensajeError = null;
+        pedido = null;
+
+        try
+        {
+            pedido = await PedidoServicio.ObtenerPorId(Id);
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudo cargar el pedido. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void CerrarError() => mensajeError = null;
+}
