@@ -1,0 +1,28 @@
+﻿.tarjeta {
+    border-left: 4px solid var(--color-primario);
+}
+
+    .tarjeta.resaltada {
+        border-left-color: #ffc107;
+    }
+
+.icono {
+    font-size: 2rem;
+    color: var(--color-primario);
+}
+
+.resaltada .icono {
+    color: #ffc107;
+}
+
+.titulo,
+.detalle {
+    color: var(--color-texto-suave);
+}
+
+.valor {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-texto);
+}
