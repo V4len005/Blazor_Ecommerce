@@ -39,7 +39,7 @@ public class ProductoService : IProductoService
 
         if (!string.IsNullOrWhiteSpace(busqueda))
         {
-            var patron = $"%{EscaparLike(busqueda.Trim())}%";
+            var patron = $"%{TextoSql.EscaparLike(busqueda.Trim())}%";
 
             consulta = consulta.Where(p =>
                 EF.Functions.Like(p.Nombre, patron) ||
@@ -80,6 +80,24 @@ public class ProductoService : IProductoService
             .Include(p => p.Categoria)
             .OrderByDescending(p => p.Id)
             .Take(Math.Max(1, cantidad))
+            .ToListAsync();
+    }
+
+    public async Task<List<Producto>> ObtenerActivosPorIds(IEnumerable<int> ids)
+    {
+        var buscados = ids.Distinct().ToList();
+
+        if (buscados.Count == 0)
+        {
+            return new List<Producto>();
+        }
+
+        await using var contexto = await _fabrica.CreateDbContextAsync();
+
+        // Una sola consulta con IN (...), sin importar cuántos productos se pidan.
+        return await contexto.Productos
+            .AsNoTracking()
+            .Where(p => p.Activo && buscados.Contains(p.Id))
             .ToListAsync();
     }
 
@@ -251,8 +269,4 @@ public class ProductoService : IProductoService
                 ex);
         }
     }
-
-    // En LIKE, los caracteres [ % _ tienen significado especial: se escapan entre corchetes.
-    private static string EscaparLike(string texto) =>
-        texto.Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]");
 }
