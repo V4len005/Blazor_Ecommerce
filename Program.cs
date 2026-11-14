@@ -18,6 +18,7 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IEstadisticaService, EstadisticaService>();
 
 // Estado del carrito: uno por visitante, con aviso de cambios.
 builder.Services.AddScoped<CarritoState>();
