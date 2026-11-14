@@ -1,0 +1,85 @@
+﻿@inject TiendaJs Js
+
+@if (Cantidad > 0)
+{
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <button type="button" class="btn btn-sm btn-outline-warning" @onclick="Avisar">
+                <i class="bi bi-bell" aria-hidden="true"></i> Avisarme en el navegador
+            </button>
+
+            <span class="small text-muted" role="status" aria-live="polite">@mensaje</span>
+        </div>
+}
+
+@code {
+    private const string Titulo = "ValTech: stock bajo";
+
+    /// <summary>Cantidad total de productos con stock bajo.</summary>
+    [Parameter, EditorRequired] public int Cantidad { get; set; }
+
+    /// <summary>Los productos más urgentes, para nombrarlos en el aviso.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ProductoStockBajo> Productos { get; set; } = Array.Empty<ProductoStockBajo>();
+
+    private string? mensaje;
+
+    private string Texto
+    {
+        get
+        {
+            var nombres = string.Join(", ", Productos.Take(3).Select(p => p.Nombre));
+            var restantes = Cantidad - Math.Min(3, Productos.Count);
+
+            return restantes > 0
+                ? $"{Cantidad} productos con stock bajo: {nombres} y {restantes} más."
+                : $"{Cantidad} producto(s) con stock bajo: {nombres}.";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || Cantidad <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            // Si la persona ya había dado permiso, el aviso sale solo al abrir el panel.
+            if (await Js.PermisoNotificaciones() == "granted")
+            {
+                await Js.MostrarNotificacion(Titulo, Texto);
+            }
+        }
+        catch (Exception)
+        {
+            // Avisar es una comodidad: si falla, el panel sigue mostrando el stock bajo.
+        }
+    }
+
+    private async Task Avisar()
+    {
+        try
+        {
+            var permiso = await Js.PedirPermisoNotificaciones();
+
+            if (permiso == "granted")
+            {
+                mensaje = await Js.MostrarNotificacion(Titulo, Texto)
+                    ? "Aviso enviado."
+                    : "No se pudo mostrar la notificación en este dispositivo.";
+            }
+            else if (permiso == "no-soportado")
+            {
+                mensaje = "Este navegador no admite notificaciones.";
+            }
+            else
+            {
+                mensaje = "No se concedió el permiso. Habilitalo desde el candado de la barra de direcciones (requiere https).";
+            }
+        }
+        catch (Exception)
+        {
+            mensaje = "No se pudo enviar el aviso.";
+        }
+    }
+}

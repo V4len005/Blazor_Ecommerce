@@ -29,7 +29,15 @@
     </table>
 </div>
 
+<div class="d-flex flex-wrap gap-2 mt-2 no-imprimir">
+    <BotonCopiar Texto="Copiar resumen" Contenido="@TextoPedido.Resumen(Pedido, ResumenCompleto)" />
+    <BotonImprimir Texto="Imprimir comprobante" />
+</div>
+
 @code {
     /// <summary>Pedido cuyos productos se muestran. Lo entrega el componente padre mediante un CascadingValue llamado "Pedido".</summary>
     [CascadingParameter(Name = "Pedido")] public Pedido Pedido { get; set; } = default!;
+
+    /// <summary>Si es true, el resumen que se copia incluye los datos del cliente (solo para administración).</summary>
+    [Parameter] public bool ResumenCompleto { get; set; }
 }

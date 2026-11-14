@@ -1,0 +1,26 @@
+﻿@inject TiendaJs Js
+
+@code {
+    /// <summary>Atributo id del elemento que debe recibir el foco.</summary>
+    [Parameter, EditorRequired] public string ElementoId { get; set; } = string.Empty;
+
+    /// <summary>Si es true (por defecto), no se enfoca en pantallas táctiles para no abrir el teclado.</summary>
+    [Parameter] public bool SoloConMouse { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.EnfocarElemento(ElementoId, SoloConMouse);
+        }
+        catch (Exception)
+        {
+            // Enfocar es una comodidad: si falla, la página funciona igual.
+        }
+    }
+}

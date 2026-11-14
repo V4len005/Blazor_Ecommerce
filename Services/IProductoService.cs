@@ -22,6 +22,11 @@ public interface IProductoService
     /// <returns>Lista de productos con su categoría, del más nuevo al más antiguo.</returns>
     Task<List<Producto>> ObtenerRecientes(int cantidad);
 
+    /// <summary>Obtiene, en una sola consulta, los productos activos cuyos identificadores se indican.</summary>
+    /// <param name="ids">Identificadores buscados (los repetidos se ignoran).</param>
+    /// <returns>Los productos activos encontrados; los inexistentes o inactivos no aparecen.</returns>
+    Task<List<Producto>> ObtenerActivosPorIds(IEnumerable<int> ids);
+
     /// <summary>Busca un producto por su identificador.</summary>
     /// <param name="id">Identificador del producto.</param>
     /// <returns>El producto, o null si no existe.</returns>

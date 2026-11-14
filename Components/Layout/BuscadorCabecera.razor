@@ -1,12 +1,15 @@
-﻿@inject NavigationManager Navegacion
+﻿@implements IAsyncDisposable
+@inject NavigationManager Navegacion
+@inject TiendaJs Js
 
 <form class="buscador" role="search" @onsubmit="Buscar" @onsubmit:preventDefault>
-    <label for="buscador-cabecera" class="visually-hidden">Buscar productos</label>
+    <label for="buscador-cabecera" class="visually-hidden">Buscar productos (atajo: tecla /)</label>
     <div class="input-group">
         <input id="buscador-cabecera"
                type="search"
                class="form-control"
-               placeholder="Buscar productos..."
+               placeholder="Buscar productos...  ( / )"
+               aria-keyshortcuts="/"
                @bind="texto"
                @bind:event="oninput" />
         <button type="submit" class="btn btn-primary" aria-label="Buscar">
@@ -17,6 +20,25 @@
 
 @code {
     private string texto = string.Empty;
+    private bool atajoRegistrado;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.RegistrarAtajoBuscador("buscador-cabecera");
+            atajoRegistrado = true;
+        }
+        catch (Exception)
+        {
+            // El atajo es una comodidad: si falla, el buscador funciona igual.
+        }
+    }
 
     private void Buscar()
     {
@@ -27,5 +49,22 @@
             : $"catalogo?busqueda={Uri.EscapeDataString(consulta)}";
 
         Navegacion.NavigateTo(destino);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!atajoRegistrado)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.QuitarAtajoBuscador();
+        }
+        catch (Exception)
+        {
+            // Si la conexión ya se cerró, el navegador descarta el atajo solo.
+        }
     }
 }
