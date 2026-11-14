@@ -17,6 +17,7 @@ public static class AplicadorStock
     /// <param name="motivo">Razón del cambio.</param>
     /// <param name="cantidad">Unidades. Positiva en Entrada y Salida; con signo, y distinta de 0, en Ajuste.</param>
     /// <param name="observacion">Detalle opcional.</param>
+    /// <param name="pedido">Pedido que origina el movimiento (ventas y cancelaciones); nulo en los manuales.</param>
     /// <returns>El movimiento agregado al contexto (todavía sin guardar).</returns>
     /// <exception cref="InvalidOperationException">Si la cantidad no es válida o el stock quedaría negativo.</exception>
     public static MovimientoStock Aplicar(
@@ -25,7 +26,8 @@ public static class AplicadorStock
         TipoMovimiento tipo,
         MotivoMovimiento motivo,
         int cantidad,
-        string? observacion)
+        string? observacion,
+        Pedido? pedido = null)
     {
         if (tipo == TipoMovimiento.Ajuste ? cantidad == 0 : cantidad <= 0)
         {
@@ -41,7 +43,8 @@ public static class AplicadorStock
             Motivo = motivo,
             Cantidad = cantidad,
             Fecha = DateTime.UtcNow,
-            Observacion = observacion
+            Observacion = observacion,
+            Pedido = pedido
         };
 
         var nuevoStock = producto.StockActual + movimiento.Variacion;

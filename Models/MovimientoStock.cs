@@ -23,9 +23,14 @@ public class MovimientoStock
     /// <summary>Momento del movimiento, en hora UTC.</summary>
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
 
-    /// <summary>Detalle libre, por ejemplo "Pedido #12" o "Stock inicial".</summary>
+    /// <summary>Detalle libre, por ejemplo "Venta online" o "Stock inicial".</summary>
     [StringLength(200, ErrorMessage = "La observación no puede superar los 200 caracteres")]
     public string? Observacion { get; set; }
+
+    /// <summary>Pedido que originó el movimiento (ventas y cancelaciones). Nulo en los movimientos manuales.</summary>
+    public int? PedidoId { get; set; }
+
+    public Pedido? Pedido { get; set; }
 
     /// <summary>Cambio neto en el stock: negativo en las Salidas, positivo (o con su signo) en el resto.</summary>
     [NotMapped]
