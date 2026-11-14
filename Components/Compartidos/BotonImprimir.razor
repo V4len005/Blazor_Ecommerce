@@ -1,0 +1,25 @@
+﻿@inject TiendaJs Js
+
+<button type="button" class="btn @Clase" @onclick="Imprimir">
+    <i class="bi bi-printer" aria-hidden="true"></i> @Texto
+</button>
+
+@code {
+    /// <summary>Texto del botón.</summary>
+    [Parameter] public string Texto { get; set; } = "Imprimir";
+
+    /// <summary>Clases de Bootstrap del botón.</summary>
+    [Parameter] public string Clase { get; set; } = "btn-outline-secondary";
+
+    private async Task Imprimir()
+    {
+        try
+        {
+            await Js.Imprimir();
+        }
+        catch (Exception)
+        {
+            // Si no se puede abrir el diálogo, la persona puede usar Ctrl + P.
+        }
+    }
+}
