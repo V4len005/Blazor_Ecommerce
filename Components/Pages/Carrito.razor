@@ -1,0 +1,142 @@
+﻿@page "/carrito"
+@inject CarritoState CarritoEstado
+
+<PageTitle>Carrito | TechStore</PageTitle>
+
+<section aria-labelledby="titulo-carrito">
+    <h1 id="titulo-carrito" class="h3 mb-3">Tu carrito</h1>
+
+    <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+    @if (CarritoEstado.EstaVacio)
+    {
+            <div class="text-center py-5">
+                <i class="bi bi-cart-x vacio" aria-hidden="true"></i>
+                <p class="lead">Tu carrito está vacío.</p>
+                <a href="catalogo" class="btn btn-primary">Ver catálogo</a>
+            </div>
+    }
+    else
+    {
+            <div class="row g-4">
+                <div class="col-12 col-lg-8">
+                    <div class="table-responsive contenedor-tabla">
+                        <table class="table tabla-admin align-middle">
+                            <caption class="visually-hidden">Productos del carrito</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col" class="text-center">Cantidad</th>
+                                    <th scope="col" class="text-end">Subtotal</th>
+                                    <th scope="col"><span class="visually-hidden">Quitar</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var item in CarritoEstado.Items)
+                            {
+                                        <tr @key="item.ProductoId">
+                                            <td>
+                                                <a href="producto/@item.ProductoId" class="fw-semibold">@item.Nombre</a>
+                                                <div class="small text-muted">@item.Marca · @Formato.Precio(item.PrecioUnitario)</div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="control-cantidad" role="group" aria-label="Cantidad de @item.Nombre">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            disabled="@(item.Cantidad <= 1)"
+                                                            aria-label="Disminuir cantidad de @item.Nombre"
+                                                            @onclick="() => Cambiar(item, item.Cantidad - 1)">
+                                                        <i class="bi bi-dash" aria-hidden="true"></i>
+                                                    </button>
+                                                    <span class="valor" aria-live="polite">@item.Cantidad</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            disabled="@(item.Cantidad >= item.StockDisponible)"
+                                                            aria-label="Aumentar cantidad de @item.Nombre"
+                                                            @onclick="() => Cambiar(item, item.Cantidad + 1)">
+                                                        <i class="bi bi-plus" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="text-end text-nowrap">@Formato.Precio(item.Subtotal)</td>
+                                            <td class="text-end">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        aria-label="Quitar @item.Nombre del carrito" title="Quitar"
+                                                        @onclick="() => Quitar(item)">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <aside class="col-12 col-lg-4" aria-labelledby="titulo-resumen">
+                    <div class="card card-body resumen">
+                        <h2 id="titulo-resumen" class="h5">Resumen</h2>
+
+                        <dl class="d-flex justify-content-between mb-1">
+                            <dt class="fw-normal">Unidades</dt>
+                            <dd class="mb-0">@CarritoEstado.CantidadTotal</dd>
+                        </dl>
+                        <dl class="d-flex justify-content-between">
+                            <dt>Total</dt>
+                            <dd class="mb-0 total">@Formato.Precio(CarritoEstado.Total)</dd>
+                        </dl>
+
+                        <p class="small text-muted">
+                            El total final se calcula al confirmar el pedido, con los precios y el stock vigentes.
+                        </p>
+
+                        <div class="d-grid gap-2">
+                            <a href="checkout" class="btn btn-primary">
+                                <i class="bi bi-credit-card" aria-hidden="true"></i> Finalizar compra
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="PedirVaciar">
+                                Vaciar carrito
+                            </button>
+                            <a href="catalogo" class="btn btn-link">Seguir comprando</a>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+    }
+</section>
+
+<ConfirmDialog Visible="@confirmarVaciar"
+               Titulo="Vaciar carrito"
+               Mensaje="Se van a quitar todos los productos del carrito. ¿Querés continuar?"
+               TextoConfirmar="Vaciar"
+               OnConfirmar="ConfirmarVaciar"
+               OnCancelar="CancelarVaciar" />
+
+@code {
+    private string? mensajeError;
+    private bool confirmarVaciar;
+
+    private void Cambiar(ItemCarrito item, int nuevaCantidad)
+    {
+        var resultado = CarritoEstado.CambiarCantidad(item.ProductoId, nuevaCantidad);
+
+        mensajeError = resultado.Exito ? null : resultado.Mensaje;
+    }
+
+    private void Quitar(ItemCarrito item)
+    {
+        CarritoEstado.Quitar(item.ProductoId);
+        mensajeError = null;
+    }
+
+    private void PedirVaciar() => confirmarVaciar = true;
+
+    private void CancelarVaciar() => confirmarVaciar = false;
+
+    private void ConfirmarVaciar()
+    {
+        CarritoEstado.Vaciar();
+        confirmarVaciar = false;
+        mensajeError = null;
+    }
+
+    private void CerrarError() => mensajeError = null;
+}

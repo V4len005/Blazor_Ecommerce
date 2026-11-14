@@ -1,0 +1,28 @@
+﻿.vacio {
+    font-size: 4rem;
+    color: var(--color-texto-suave);
+}
+
+.control-cantidad {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.valor {
+    min-width: 2ch;
+    font-weight: 600;
+    text-align: center;
+}
+
+.total {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+@media (min-width: 992px) {
+    .resumen {
+        position: sticky;
+        top: 1rem;
+    }
+}
