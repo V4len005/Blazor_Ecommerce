@@ -1,4 +1,5 @@
 ﻿@page "/checkout"
+@implements IDisposable
 @inject CarritoState CarritoEstado
 @inject IPedidoService PedidoServicio
 @inject NavigationManager Navegacion
@@ -147,6 +148,12 @@
 </section>
 
 @code {
+    protected override void OnInitialized() => CarritoEstado.OnChange += Actualizar;
+
+    // El carrito se restaura de forma asíncrona después del primer dibujo: la página debe redibujarse cuando eso pasa.
+    private void Actualizar() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CarritoEstado.OnChange -= Actualizar;
     private CheckoutFormulario modelo = new();
     private bool guardando;
     private bool pedidoConfirmado;
