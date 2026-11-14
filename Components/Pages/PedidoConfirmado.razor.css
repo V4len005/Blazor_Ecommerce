@@ -1,0 +1,15 @@
+﻿.exito {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 3.5rem;
+    color: #198754;
+}
+
+.datos dt {
+    font-weight: 600;
+}
+
+.datos dd {
+    margin-bottom: 0.75rem;
+    color: var(--color-texto-suave);
+}

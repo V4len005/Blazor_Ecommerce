@@ -1,11 +1,13 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject CarritoState Carrito
 
 <div class="pagina">
     <header class="cabecera">
         <div class="container cabecera-contenido">
-            <a href="/" class="logo" aria-label="TechStore, ir al inicio">
+            <a href="/" class="logo" aria-label="ValTech, ir al inicio">
                 <i class="bi bi-cpu-fill" aria-hidden="true"></i>
-                <span>TechStore</span>
+                <span>ValTech</span>
             </a>
 
             <div class="caja-buscador">
@@ -14,9 +16,14 @@
 
             <div class="acciones">
                 <BotonTema />
-                <a href="carrito" class="btn btn-outline-primary position-relative" aria-label="Ver carrito de compras">
+                <a href="carrito" class="btn btn-outline-primary position-relative"
+                   aria-label="Ver carrito de compras, @Carrito.CantidadTotal producto(s)">
                     <i class="bi bi-cart3" aria-hidden="true"></i>
-                    <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle">0</span>
+                    @if (Carrito.CantidadTotal > 0)
+                    {
+                            <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                                  aria-hidden="true">@Carrito.CantidadTotal</span>
+                    }
                 </a>
             </div>
         </div>
@@ -29,6 +36,15 @@
     </main>
 
     <footer class="pie">
-        <p class="mb-0">&copy; @DateTime.Now.Year TechStore · Proyecto Integrador universitario (productos y precios ficticios)</p>
+        <p class="mb-0">&copy; @DateTime.Now.Year ValTech · Proyecto Integrador universitario (productos y precios ficticios)</p>
     </footer>
 </div>
+
+@code {
+    protected override void OnInitialized() => Carrito.OnChange += ActualizarContador;
+
+    // El aviso puede llegar desde otro hilo: InvokeAsync lo ejecuta en el contexto del componente.
+    private void ActualizarContador() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Carrito.OnChange -= ActualizarContador;
+}
