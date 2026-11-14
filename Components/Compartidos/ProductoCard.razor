@@ -1,4 +1,6 @@
-﻿<article class="card producto h-100 @(SinStock ? "sin-stock" : "")">
+﻿@inject CarritoState Carrito
+
+<article class="card producto h-100 @(SinStock ? "sin-stock" : "")">
     <div class="contenedor-imagen">
         <ImagenProducto Producto="Producto" />
 
@@ -17,16 +19,49 @@
 
         <p class="precio mt-auto mb-2">@Formato.Precio(Producto.Precio)</p>
 
-        <a href="producto/@Producto.Id" class="btn btn-outline-primary w-100"
-           aria-label="Ver detalle de @Producto.Nombre">
-            Ver detalle
-        </a>
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary" disabled="@SinStock" @onclick="AgregarAlCarrito"
+                    aria-label="@(SinStock ? $"{Producto.Nombre}: sin stock" : $"Agregar {Producto.Nombre} al carrito")">
+                <i class="bi bi-cart-plus" aria-hidden="true"></i> @(SinStock ? "Sin stock" : "Agregar")
+            </button>
+
+            <a href="producto/@Producto.Id" class="btn btn-outline-primary"
+               aria-label="Ver detalle de @Producto.Nombre">
+                Ver detalle
+            </a>
+        </div>
+
+        <p class="mensaje small mb-0 mt-2 @(ultimoExito ? "text-success" : "text-danger")"
+           role="status" aria-live="polite">@mensaje</p>
     </div>
 </article>
 
 @code {
+    private const int MilisegundosAviso = 2500;
+
     /// <summary>Producto que se muestra en la tarjeta. Conviene que traiga su categoría cargada.</summary>
     [Parameter, EditorRequired] public Producto Producto { get; set; } = default!;
 
+    private string? mensaje;
+    private bool ultimoExito;
+    private int numeroAviso;
+
     private bool SinStock => Producto.StockActual <= 0;
+
+    private async Task AgregarAlCarrito()
+    {
+        var resultado = Carrito.Agregar(Producto);
+
+        ultimoExito = resultado.Exito;
+        mensaje = resultado.Exito ? "Agregado al carrito" : resultado.Mensaje;
+
+        // El aviso se borra solo; el número evita que un aviso viejo borre uno más nuevo.
+        var aviso = ++numeroAviso;
+        await Task.Delay(MilisegundosAviso);
+
+        if (aviso == numeroAviso)
+        {
+            mensaje = null;
+        }
+    }
 }

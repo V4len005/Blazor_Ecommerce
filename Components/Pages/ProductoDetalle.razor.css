@@ -16,6 +16,14 @@
     color: var(--color-texto);
 }
 
+.cantidad {
+    width: 6.5rem;
+}
+
+.mensaje {
+    min-height: 1.25rem;
+}
+
 .ficha dt {
     font-weight: 600;
 }

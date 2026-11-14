@@ -1,5 +1,6 @@
 ﻿@page "/producto/{Id:int}"
 @inject IProductoService ProductoServicio
+@inject CarritoState Carrito
 
 <PageTitle>@(producto?.Nombre ?? "Producto") | TechStore</PageTitle>
 
@@ -44,6 +45,36 @@ else if (producto is not null)
                 <p class="precio">@Formato.Precio(producto.Precio)</p>
                 <p><span class="badge @estado.Clase">@estado.Texto</span></p>
 
+            @if (producto.StockActual > 0)
+            {
+                        <div class="d-flex flex-wrap align-items-end gap-2 mb-1">
+                            <div>
+                                <label for="cantidad" class="form-label">Cantidad</label>
+                                <input id="cantidad" type="number" class="form-control cantidad"
+                                       min="1" max="@producto.StockActual" @bind="cantidad" />
+                            </div>
+                            <button type="button" class="btn btn-primary" @onclick="AgregarAlCarrito">
+                                <i class="bi bi-cart-plus" aria-hidden="true"></i> Agregar al carrito
+                            </button>
+                        </div>
+            }
+            else
+            {
+                        <button type="button" class="btn btn-secondary mb-1" disabled>Sin stock</button>
+            }
+
+                <p class="mensaje small" role="status" aria-live="polite">
+                @if (mensaje is not null)
+                {
+                            <span class="@(ultimoExito ? "text-success" : "text-danger")">@mensaje</span>
+
+                    @if (ultimoExito)
+                    {
+                                    <a href="carrito" class="ms-1">Ver carrito</a>
+                    }
+                }
+                </p>
+
                 <p>@producto.Descripcion</p>
 
                 <dl class="ficha">
@@ -87,6 +118,10 @@ else if (mensajeError is null)
     private bool cargando = true;
     private string? mensajeError;
 
+    private int cantidad = 1;
+    private string? mensaje;
+    private bool ultimoExito;
+
     protected override async Task OnParametersSetAsync()
     {
         // Evita consultar de nuevo si el Id no cambió.
@@ -99,6 +134,8 @@ else if (mensajeError is null)
         cargando = true;
         mensajeError = null;
         producto = null;
+        cantidad = 1;
+        mensaje = null;
 
         try
         {
@@ -115,6 +152,19 @@ else if (mensajeError is null)
         {
             cargando = false;
         }
+    }
+
+    private void AgregarAlCarrito()
+    {
+        if (producto is null)
+        {
+            return;
+        }
+
+        var resultado = Carrito.Agregar(producto, cantidad);
+
+        ultimoExito = resultado.Exito;
+        mensaje = resultado.Exito ? "Agregado al carrito." : resultado.Mensaje;
     }
 
     private static (string Texto, string Clase) EstadoStock(Producto p) =>

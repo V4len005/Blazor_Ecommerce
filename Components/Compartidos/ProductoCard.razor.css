@@ -40,6 +40,10 @@
     color: var(--color-texto);
 }
 
+.mensaje {
+    min-height: 1.25rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .producto {
         transition: none;
