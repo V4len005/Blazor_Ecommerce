@@ -14,6 +14,8 @@ public class TiendaDbContext : DbContext
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<MovimientoStock> MovimientosStock => Set<MovimientoStock>();
+    public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<PedidoItem> PedidoItems => Set<PedidoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,10 +55,43 @@ public class TiendaDbContext : DbContext
                    .HasForeignKey(m => m.ProductoId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            // Un movimiento puede venir de un pedido (ventas y cancelaciones); los manuales no.
+            entidad.HasOne(m => m.Pedido)
+                   .WithMany()
+                   .HasForeignKey(m => m.PedidoId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             // Acelera la consulta del historial de un producto ordenado por fecha.
             entidad.HasIndex(m => new { m.ProductoId, m.Fecha });
 
             entidad.HasData(SemillaMovimientos.Movimientos);
+        });
+
+        modelBuilder.Entity<Pedido>(entidad =>
+        {
+            entidad.Property(p => p.Estado).HasConversion<string>().HasMaxLength(20);
+            entidad.Property(p => p.Total).HasPrecision(18, 2);
+
+            // Aceleran la lista de pedidos por fecha y el filtro por estado.
+            entidad.HasIndex(p => p.Fecha);
+            entidad.HasIndex(p => p.Estado);
+        });
+
+        modelBuilder.Entity<PedidoItem>(entidad =>
+        {
+            entidad.Property(i => i.PrecioUnitario).HasPrecision(18, 2);
+
+            // Un pedido tiene muchos ítems; si se borrara el pedido, se borran sus ítems.
+            entidad.HasOne(i => i.Pedido)
+                   .WithMany(p => p.Items)
+                   .HasForeignKey(i => i.PedidoId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Un producto con pedidos no se puede borrar: se desactiva.
+            entidad.HasOne(i => i.Producto)
+                   .WithMany()
+                   .HasForeignKey(i => i.ProductoId)
+                   .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
