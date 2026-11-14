@@ -18,6 +18,9 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IStockService, StockService>();
 
+// Estado del carrito: uno por visitante, con aviso de cambios.
+builder.Services.AddScoped<CarritoState>();
+
 var app = builder.Build();
 
 // Al iniciar, crea la base si no existe y aplica las migraciones pendientes.
