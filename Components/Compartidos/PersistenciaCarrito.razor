@@ -1,0 +1,138 @@
+﻿@using System.Text.Json
+@implements IDisposable
+@inject CarritoState CarritoEstado
+@inject IProductoService ProductoServicio
+@inject TiendaJs Js
+
+@code {
+    private const string Clave = "valtech-carrito";
+    private const int MaximoLineas = 50;
+    private const int MaximoCantidadPorLinea = 1000;
+
+    private bool suscripto;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            // Si ya hay productos en memoria (la persona viene de otra zona de la app), no se pisan.
+            if (CarritoEstado.EstaVacio)
+            {
+                await Restaurar();
+            }
+        }
+        catch (Exception)
+        {
+            // La persistencia es una comodidad: si falla, el carrito sigue funcionando en memoria.
+        }
+
+        // Recién ahora se escuchan los cambios, así la restauración no se guarda a sí misma a medias.
+        CarritoEstado.OnChange += Guardar;
+        suscripto = true;
+    }
+
+    private async Task Restaurar()
+    {
+        var texto = await Js.LeerDeLocalStorage(Clave);
+
+        if (string.IsNullOrWhiteSpace(texto))
+        {
+            return;
+        }
+
+        List<LineaPedido?>? guardadas;
+
+        try
+        {
+            guardadas = JsonSerializer.Deserialize<List<LineaPedido?>>(texto);
+        }
+        catch (JsonException)
+        {
+            // Contenido ilegible (por ejemplo, editado a mano): se descarta.
+            await Js.BorrarDeLocalStorage(Clave);
+            return;
+        }
+
+        if (guardadas is null)
+        {
+            return;
+        }
+
+        // Lo que hay en localStorage lo puede editar cualquiera: se limpia y se limita todo.
+        var lineas = guardadas
+            .Take(MaximoLineas * 4)
+            .Where(l => l is not null && l.ProductoId > 0 && l.Cantidad > 0)
+            .GroupBy(l => l!.ProductoId)
+            .Select(g => new LineaPedido(
+                g.Key,
+                Math.Min(g.Sum(l => Math.Min(l!.Cantidad, MaximoCantidadPorLinea)), MaximoCantidadPorLinea)))
+            .Take(MaximoLineas)
+            .ToList();
+
+        if (lineas.Count == 0)
+        {
+            await Js.BorrarDeLocalStorage(Clave);
+            return;
+        }
+
+        // Precio y stock se leen de nuevo de la base: lo guardado solo recuerda qué producto y cuántas unidades.
+        var productos = (await ProductoServicio.ObtenerActivosPorIds(lineas.Select(l => l.ProductoId)))
+            .ToDictionary(p => p.Id);
+
+        foreach (var linea in lineas)
+        {
+            if (!productos.TryGetValue(linea.ProductoId, out var producto))
+            {
+                continue;
+            }
+
+            var cantidad = Math.Min(linea.Cantidad, producto.StockActual);
+
+            if (cantidad > 0)
+            {
+                CarritoEstado.Agregar(producto, cantidad);
+            }
+        }
+
+        // Se guarda lo que realmente quedó (sin productos inactivos ni cantidades pasadas de stock).
+        await GuardarAsync();
+    }
+
+    private void Guardar() => _ = GuardarAsync();
+
+    private async Task GuardarAsync()
+    {
+        try
+        {
+            if (CarritoEstado.EstaVacio)
+            {
+                await Js.BorrarDeLocalStorage(Clave);
+                return;
+            }
+
+            // Solo se guarda qué producto y cuántas unidades: nunca precios ni stock.
+            var lineas = CarritoEstado.Items
+                .Select(i => new LineaPedido(i.ProductoId, i.Cantidad))
+                .ToList();
+
+            await Js.GuardarEnLocalStorage(Clave, JsonSerializer.Serialize(lineas));
+        }
+        catch (Exception)
+        {
+            // Si la conexión se cortó o el navegador bloquea el almacenamiento, el carrito sigue en memoria.
+        }
+    }
+
+    public void Dispose()
+    {
+        if (suscripto)
+        {
+            CarritoEstado.OnChange -= Guardar;
+        }
+    }
+}

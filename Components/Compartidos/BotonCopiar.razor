@@ -1,0 +1,64 @@
+﻿@inject TiendaJs Js
+
+<button type="button" class="btn @Clase" @onclick="Copiar">
+    <i class="bi @Icono" aria-hidden="true"></i> @Etiqueta
+</button>
+<span class="visually-hidden" role="status" aria-live="polite">@Anuncio</span>
+
+@code {
+    private const int MilisegundosAviso = 2000;
+
+    private enum Resultado { Ninguno, Copiado, Error }
+
+    /// <summary>Texto que se copia al portapapeles.</summary>
+    [Parameter, EditorRequired] public string Contenido { get; set; } = string.Empty;
+
+    /// <summary>Texto del botón en reposo.</summary>
+    [Parameter] public string Texto { get; set; } = "Copiar";
+
+    /// <summary>Clases de Bootstrap del botón.</summary>
+    [Parameter] public string Clase { get; set; } = "btn-outline-secondary";
+
+    private Resultado resultado = Resultado.Ninguno;
+    private int numeroAviso;
+
+    private string Etiqueta => resultado switch
+    {
+        Resultado.Copiado => "¡Copiado!",
+        Resultado.Error => "No se pudo copiar",
+        _ => Texto
+    };
+
+    private string Icono => resultado == Resultado.Copiado ? "bi-clipboard-check" : "bi-clipboard";
+
+    private string Anuncio => resultado switch
+    {
+        Resultado.Copiado => "Copiado al portapapeles",
+        Resultado.Error => "No se pudo copiar",
+        _ => string.Empty
+    };
+
+    private async Task Copiar()
+    {
+        try
+        {
+            resultado = await Js.CopiarAlPortapapeles(Contenido) ? Resultado.Copiado : Resultado.Error;
+        }
+        catch (Exception)
+        {
+            resultado = Resultado.Error;
+        }
+
+        // El resultado llegó después de una espera: se pide redibujar para que se vea ya.
+        StateHasChanged();
+
+        // El aviso se borra solo; el número evita que uno viejo borre uno más nuevo.
+        var aviso = ++numeroAviso;
+        await Task.Delay(MilisegundosAviso);
+
+        if (aviso == numeroAviso)
+        {
+            resultado = Resultado.Ninguno;
+        }
+    }
+}
