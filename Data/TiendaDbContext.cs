@@ -69,7 +69,12 @@ public class TiendaDbContext : DbContext
 
         modelBuilder.Entity<Pedido>(entidad =>
         {
-            entidad.Property(p => p.Estado).HasConversion<string>().HasMaxLength(20);
+            // Si el estado cambió desde que se leyó el pedido, el guardado falla en vez de pisarlo.
+            entidad.Property(p => p.Estado)
+                   .HasConversion<string>()
+                   .HasMaxLength(20)
+                   .IsConcurrencyToken();
+
             entidad.Property(p => p.Total).HasPrecision(18, 2);
 
             // Aceleran la lista de pedidos por fecha y el filtro por estado.

@@ -1,0 +1,199 @@
+﻿@page "/admin/pedidos/{Id:int}"
+@inject IPedidoService PedidoServicio
+
+<PageTitle>Pedido #@Id | Administración</PageTitle>
+
+<section aria-labelledby="titulo-pedido-admin">
+    <header class="mb-3">
+        <a href="admin/pedidos" class="small">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver a pedidos
+        </a>
+        <h1 id="titulo-pedido-admin" class="h3 mt-2 d-flex flex-wrap align-items-center gap-2">
+            Pedido #@Id
+            @if (pedido is not null)
+            {
+                    <span class="badge fs-6 @Formato.ClaseEstado(pedido.Estado)">@pedido.Estado</span>
+            }
+        </h1>
+    </header>
+
+    <AlertError Mensaje="@errorCarga" OnCerrar="CerrarErrorCarga" />
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando pedido...</span>
+            </div>
+    }
+    else if (pedido is not null)
+    {
+        @* El pedido se entrega a los componentes hijos sin pasarlo como parámetro en cada nivel. *@
+            <CascadingValue Value="pedido" Name="Pedido">
+                <div class="row g-4">
+                    <div class="col-12 col-lg-5">
+                        <DatosPedido />
+                    </div>
+
+                    <div class="col-12 col-lg-7">
+                        <ItemsPedido />
+                    </div>
+                </div>
+            </CascadingValue>
+
+            <section class="card card-body mt-4" aria-labelledby="titulo-acciones">
+                <h2 id="titulo-acciones" class="h5">Estado del pedido</h2>
+
+            @if (aviso is not null)
+            {
+                        <div class="alert alert-success" role="status">@aviso</div>
+            }
+
+                <AlertError Mensaje="@errorAccion" OnCerrar="CerrarErrorAccion" />
+
+            @if (Siguientes.Count == 0)
+            {
+                        <p class="mb-0 text-muted">
+                            Este pedido está <strong>@pedido.Estado</strong> y ya no admite cambios.
+                        </p>
+            }
+            else
+            {
+                        <div class="d-flex flex-wrap gap-2">
+                    @foreach (var siguiente in Siguientes)
+                    {
+                        @if (siguiente == EstadoPedido.Cancelado)
+                        {
+                                            <button type="button" class="btn btn-outline-danger" disabled="@procesando"
+                                                    @onclick="PedirCancelacion">
+                                                <i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar pedido
+                                            </button>
+                        }
+                        else
+                        {
+                                            <button type="button" class="btn btn-primary" disabled="@procesando"
+                                                    @onclick="() => Cambiar(siguiente)">
+                                                <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                                                Marcar como @siguiente.ToString().ToLowerInvariant()
+                                            </button>
+                        }
+                    }
+                        </div>
+            }
+            </section>
+    }
+    else if (errorCarga is null)
+    {
+            <div class="alert alert-warning" role="status">No encontramos un pedido con ese número.</div>
+    }
+</section>
+
+<ConfirmDialog Visible="@confirmarCancelacion"
+               Titulo="Cancelar pedido"
+               Mensaje="@MensajeCancelacion"
+               TextoConfirmar="Cancelar pedido"
+               TextoCancelar="Volver"
+               OnConfirmar="ConfirmarCancelacion"
+               OnCancelar="AbandonarCancelacion" />
+
+@code {
+    /// <summary>Número del pedido, tomado de la ruta.</summary>
+    [Parameter] public int Id { get; set; }
+
+    private Pedido? pedido;
+    private int? idCargado;
+    private bool cargando = true;
+    private bool procesando;
+    private bool confirmarCancelacion;
+    private string? errorCarga;
+    private string? errorAccion;
+    private string? aviso;
+
+    private IReadOnlyList<EstadoPedido> Siguientes =>
+        pedido?.Estado.Siguientes() ?? Array.Empty<EstadoPedido>();
+
+    private string MensajeCancelacion =>
+        $"Se va a cancelar el pedido #{Id} y se devolverá al stock cada producto ({pedido?.Items.Sum(i => i.Cantidad)} unidad(es) en total). Esta acción no se puede deshacer.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita recargar si el Id no cambió.
+        if (idCargado == Id)
+        {
+            return;
+        }
+
+        idCargado = Id;
+        cargando = true;
+        errorCarga = null;
+        errorAccion = null;
+        aviso = null;
+        pedido = null;
+
+        await Recargar();
+
+        cargando = false;
+    }
+
+    private async Task Recargar()
+    {
+        try
+        {
+            pedido = await PedidoServicio.ObtenerPorId(Id);
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudo cargar el pedido. Intentá de nuevo en unos minutos.";
+        }
+    }
+
+    private async Task Cambiar(EstadoPedido nuevoEstado)
+    {
+        if (pedido is null)
+        {
+            return;
+        }
+
+        procesando = true;
+        errorAccion = null;
+        aviso = null;
+
+        try
+        {
+            await PedidoServicio.CambiarEstado(pedido.Id, nuevoEstado);
+
+            aviso = nuevoEstado == EstadoPedido.Cancelado
+                ? "Pedido cancelado. El stock de sus productos fue devuelto."
+                : $"Pedido marcado como {nuevoEstado.ToString().ToLowerInvariant()}.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorAccion = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorAccion = "No se pudo cambiar el estado del pedido. Intentá de nuevo.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+
+        // Se vuelve a leer: la pantalla siempre muestra el estado real, haya salido bien o mal.
+        await Recargar();
+    }
+
+    private void PedirCancelacion() => confirmarCancelacion = true;
+
+    private void AbandonarCancelacion() => confirmarCancelacion = false;
+
+    private async Task ConfirmarCancelacion()
+    {
+        confirmarCancelacion = false;
+        await Cambiar(EstadoPedido.Cancelado);
+    }
+
+    private void CerrarErrorCarga() => errorCarga = null;
+
+    private void CerrarErrorAccion() => errorAccion = null;
+}

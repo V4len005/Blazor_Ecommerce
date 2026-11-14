@@ -1,0 +1,37 @@
+﻿<article class="card card-body" aria-labelledby="titulo-datos-pedido">
+    <h2 id="titulo-datos-pedido" class="h5">Datos del pedido</h2>
+
+    <dl class="datos mb-0">
+        <dt>Fecha</dt>
+        <dd>@Formato.FechaHora(Pedido.Fecha)</dd>
+
+        <dt>Estado</dt>
+        <dd><span class="badge @Formato.ClaseEstado(Pedido.Estado)">@Pedido.Estado</span></dd>
+
+        <dt>Cliente</dt>
+        <dd>@Pedido.NombreCliente</dd>
+
+        <dt>Email</dt>
+        <dd>@Pedido.Email</dd>
+
+        @if (!string.IsNullOrWhiteSpace(Pedido.Telefono))
+        {
+                <dt>Teléfono</dt>
+                <dd>@Pedido.Telefono</dd>
+        }
+
+        <dt>Entrega</dt>
+        <dd>@(string.IsNullOrWhiteSpace(Pedido.DireccionEnvio) ? "Retiro en el local" : Pedido.DireccionEnvio)</dd>
+
+        @if (!string.IsNullOrWhiteSpace(Pedido.Observaciones))
+        {
+                <dt>Observaciones</dt>
+                <dd>@Pedido.Observaciones</dd>
+        }
+    </dl>
+</article>
+
+@code {
+    /// <summary>Pedido que se muestra. Lo entrega el componente padre mediante un CascadingValue llamado "Pedido".</summary>
+    [CascadingParameter(Name = "Pedido")] public Pedido Pedido { get; set; } = default!;
+}

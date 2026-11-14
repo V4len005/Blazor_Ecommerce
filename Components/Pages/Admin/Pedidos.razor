@@ -1,0 +1,195 @@
+﻿@page "/admin/pedidos"
+@inject IPedidoService PedidoServicio
+@inject NavigationManager Navegacion
+
+<PageTitle>Pedidos | Administración</PageTitle>
+
+<section aria-labelledby="titulo-pedidos">
+    <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h1 id="titulo-pedidos" class="h3 mb-0">Pedidos</h1>
+    </header>
+
+    <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
+
+    <form class="card card-body mb-3" role="search" aria-label="Filtrar pedidos"
+          @onsubmit="Filtrar" @onsubmit:preventDefault>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="filtro-busqueda" class="form-label">Buscar</label>
+                <input id="filtro-busqueda" type="search" class="form-control"
+                       placeholder="Número, nombre o email"
+                       @bind="textoBusqueda" @bind:event="oninput" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="filtro-estado" class="form-label">Estado</label>
+                <select id="filtro-estado" class="form-select" @bind="estadoSeleccionado">
+                    <option value="">Todos</option>
+                    @foreach (var estado in Enum.GetValues<EstadoPedido>())
+                    {
+                            <option value="@estado">@estado</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel" aria-hidden="true"></i> Filtrar
+                </button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+            </div>
+        </div>
+    </form>
+
+    @if (cargando)
+    {
+            <div class="text-center py-5" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Cargando pedidos...</span>
+            </div>
+    }
+    else
+    {
+            <p class="text-muted small mb-2" aria-live="polite">
+                Mostrando @resultado.Items.Count de @resultado.TotalRegistros pedido(s)
+            </p>
+
+        @if (resultado.Items.Count == 0)
+        {
+                    <div class="alert alert-info" role="status">No hay pedidos con esos filtros.</div>
+        }
+        else
+        {
+                    <div class="table-responsive contenedor-tabla">
+                        <table class="table tabla-admin align-middle">
+                            <caption class="visually-hidden">Listado de pedidos</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">N°</th>
+                                    <th scope="col" class="d-none d-md-table-cell">Fecha</th>
+                                    <th scope="col">Cliente</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col" class="text-end">Total</th>
+                                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        @foreach (var p in resultado.Items)
+                        {
+                                        <tr @key="p.Id">
+                                            <td class="fw-semibold">#@p.Id</td>
+                                            <td class="d-none d-md-table-cell text-nowrap">@Formato.FechaHora(p.Fecha)</td>
+                                            <td>
+                                                <div>@p.NombreCliente</div>
+                                                <div class="small text-muted">
+                                        @p.Items.Sum(i => i.Cantidad) unidad(es)
+                                                    <span class="d-md-none"> · @Formato.FechaHora(p.Fecha)</span>
+                                                </div>
+                                            </td>
+                                            <td><span class="badge @Formato.ClaseEstado(p.Estado)">@p.Estado</span></td>
+                                            <td class="text-end text-nowrap">@Formato.Precio(p.Total)</td>
+                                            <td class="text-end">
+                                                <a href="admin/pedidos/@p.Id" class="btn btn-sm btn-outline-primary"
+                                                   aria-label="Ver el pedido @p.Id" title="Ver detalle">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                        }
+                            </tbody>
+                        </table>
+                    </div>
+        }
+
+            <div class="mt-3">
+                <Paginacion PaginaActual="resultado.Pagina"
+                            TotalPaginas="resultado.TotalPaginas"
+                            OnCambio="CambiarPagina" />
+            </div>
+    }
+</section>
+
+@code {
+    private const int TamanioPagina = 10;
+
+    /// <summary>Texto buscado, tomado de la URL (?busqueda=...).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "busqueda")]
+    public string? Busqueda { get; set; }
+
+    /// <summary>Estado filtrado, tomado de la URL (?estado=...). Llega como texto.</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "estado")]
+    public string? Estado { get; set; }
+
+    /// <summary>Página pedida, tomada de la URL (?pagina=...).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "pagina")]
+    public int? Pagina { get; set; }
+
+    private ResultadoPaginado<Pedido> resultado = new();
+
+    private string textoBusqueda = string.Empty;
+    private string estadoSeleccionado = string.Empty;
+
+    private bool cargando = true;
+    private string? mensajeError;
+    private string? claveCargada;
+
+    // Convierte el texto de la URL en enum; un valor inválido se ignora (no filtra).
+    private EstadoPedido? EstadoFiltro =>
+        Enum.TryParse<EstadoPedido>(Estado, true, out var estado) && Enum.IsDefined(estado) ? estado : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Evita consultar de nuevo si la URL no cambió.
+        var clave = $"{Busqueda}|{Estado}|{Pagina}";
+
+        if (clave == claveCargada)
+        {
+            return;
+        }
+
+        claveCargada = clave;
+
+        textoBusqueda = Busqueda ?? string.Empty;
+        estadoSeleccionado = EstadoFiltro?.ToString() ?? string.Empty;
+
+        await CargarPedidos();
+    }
+
+    private async Task CargarPedidos()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            resultado = await PedidoServicio.ObtenerPaginado(
+                EstadoFiltro, Busqueda, Pagina ?? 1, TamanioPagina);
+        }
+        catch (Exception)
+        {
+            mensajeError = "No se pudieron cargar los pedidos. Intentá de nuevo en unos minutos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // Arma la URL con los filtros indicados. Un valor null o vacío quita ese parámetro.
+    private string Enlace(string? busqueda, string? estado, int? pagina = null) =>
+        Navegacion.GetUriWithQueryParameters(new Dictionary<string, object?>
+            {
+                ["busqueda"] = string.IsNullOrWhiteSpace(busqueda) ? null : busqueda.Trim(),
+                ["estado"] = string.IsNullOrEmpty(estado) ? null : estado,
+                ["pagina"] = pagina
+            });
+
+    private void Filtrar() => Navegacion.NavigateTo(Enlace(textoBusqueda, estadoSeleccionado));
+
+    private void Limpiar() => Navegacion.NavigateTo(Enlace(null, null));
+
+    private void CambiarPagina(int nuevaPagina) =>
+        Navegacion.NavigateTo(Enlace(Busqueda, EstadoFiltro?.ToString(), nuevaPagina == 1 ? null : nuevaPagina));
+
+    private void CerrarError() => mensajeError = null;
+}
