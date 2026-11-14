@@ -23,6 +23,9 @@ builder.Services.AddScoped<IEstadisticaService, EstadisticaService>();
 // Estado del carrito: uno por visitante, con aviso de cambios.
 builder.Services.AddScoped<CarritoState>();
 
+// Puente hacia el módulo JavaScript: se importa una vez por visitante y se libera al terminar.
+builder.Services.AddScoped<TiendaJs>();
+
 var app = builder.Build();
 
 // Al iniciar, crea la base si no existe y aplica las migraciones pendientes.
