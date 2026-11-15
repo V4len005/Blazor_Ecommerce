@@ -1,5 +1,4 @@
 ﻿@page "/admin/productos"
-@using System.Globalization
 @inject IProductoService ProductoServicio
 @inject ICategoriaService CategoriaServicio
 
@@ -87,7 +86,7 @@
                                                 <div class="small text-muted">@p.Marca@(string.IsNullOrWhiteSpace(p.Sku) ? "" : $" · {p.Sku}")</div>
                                             </td>
                                             <td class="d-none d-md-table-cell">@(p.Categoria?.Nombre)</td>
-                                            <td class="text-end text-nowrap">@FormatearPrecio(p.Precio)</td>
+                                            <td class="text-end text-nowrap">@Formato.Precio(p.Precio)</td>
                                             <td class="text-center">@p.StockActual</td>
                                             <td>
                                                 <span class="badge @(p.Activo ? "bg-success" : "bg-secondary")">
@@ -137,7 +136,6 @@
 
 @code {
     private const int TamanioPagina = 10;
-    private static readonly CultureInfo Cultura = new("es-AR");
 
     private ResultadoPaginado<Producto> resultado = new();
     private List<Categoria> categorias = new();
@@ -261,5 +259,4 @@
 
     private void CerrarError() => mensajeError = null;
 
-    private static string FormatearPrecio(decimal precio) => precio.ToString("C", Cultura);
 }

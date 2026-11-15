@@ -17,6 +17,21 @@ public class TiendaJs : IAsyncDisposable
         _js = js;
     }
 
+    /// <summary>Lee la preferencia de modo oscuro guardada en el navegador.</summary>
+    /// <returns>True si la persona había activado el modo oscuro.</returns>
+    public async Task<bool> ObtenerModoOscuro() =>
+        await (await Modulo()).InvokeAsync<bool>("obtenerModoOscuro");
+
+    /// <summary>Aplica o quita el modo oscuro en la página, sin guardar la preferencia.</summary>
+    /// <param name="activar">True para activar el modo oscuro.</param>
+    public async Task AplicarModoOscuro(bool activar) =>
+        await (await Modulo()).InvokeVoidAsync("aplicarModoOscuro", activar);
+
+    /// <summary>Aplica el modo oscuro y guarda la preferencia para la próxima visita.</summary>
+    /// <param name="activar">True para activar el modo oscuro.</param>
+    public async Task EstablecerModoOscuro(bool activar) =>
+        await (await Modulo()).InvokeVoidAsync("establecerModoOscuro", activar);
+
     /// <summary>Copia un texto al portapapeles (con un método alternativo si no hay https).</summary>
     /// <param name="texto">Texto a copiar.</param>
     /// <returns>True si se pudo copiar.</returns>

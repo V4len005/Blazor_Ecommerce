@@ -8,10 +8,12 @@ namespace Blazor_Ecommerce.Services;
 public class ProductoService : IProductoService
 {
     private readonly IDbContextFactory<TiendaDbContext> _fabrica;
+    private readonly ILogger<ProductoService> _logger;
 
-    public ProductoService(IDbContextFactory<TiendaDbContext> fabrica)
+    public ProductoService(IDbContextFactory<TiendaDbContext> fabrica, ILogger<ProductoService> logger)
     {
         _fabrica = fabrica;
+        _logger = logger;
     }
 
     public async Task<ResultadoPaginado<Producto>> ObtenerPaginado(
@@ -141,6 +143,10 @@ public class ProductoService : IProductoService
 
         await GuardarCambios(contexto);
 
+        _logger.LogInformation(
+            "Producto creado: Id {ProductoId}, SKU {Sku}, stock inicial {StockInicial}.",
+            producto.Id, producto.Sku ?? "(sin SKU)", producto.StockActual);
+
         return producto;
     }
 
@@ -169,6 +175,8 @@ public class ProductoService : IProductoService
 
         await GuardarCambios(contexto);
 
+        _logger.LogInformation("Producto actualizado: Id {ProductoId}.", existente.Id);
+
         return existente;
     }
 
@@ -185,6 +193,9 @@ public class ProductoService : IProductoService
 
         producto.Activo = !producto.Activo;
         await contexto.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Producto {ProductoId} {Accion}.", id, producto.Activo ? "activado" : "desactivado");
     }
 
     public async Task Eliminar(int id)
@@ -206,10 +217,15 @@ public class ProductoService : IProductoService
         }
         catch (DbUpdateException ex)
         {
+            _logger.LogWarning(
+                "No se pudo eliminar el producto {ProductoId}: tiene registros asociados.", id);
+
             throw new InvalidOperationException(
                 "No se puede eliminar el producto porque tiene registros asociados (movimientos de stock o pedidos). Desactivalo en su lugar.",
                 ex);
         }
+
+        _logger.LogInformation("Producto eliminado: Id {ProductoId}.", id);
     }
 
     // Limpia espacios y convierte los textos opcionales vacíos en null.
@@ -256,7 +272,7 @@ public class ProductoService : IProductoService
         }
     }
 
-    private static async Task GuardarCambios(TiendaDbContext contexto)
+    private async Task GuardarCambios(TiendaDbContext contexto)
     {
         try
         {
@@ -264,6 +280,8 @@ public class ProductoService : IProductoService
         }
         catch (DbUpdateException ex)
         {
+            _logger.LogError(ex, "Error al guardar un producto en la base de datos.");
+
             throw new InvalidOperationException(
                 "No se pudo guardar el producto. Verificá que la categoría exista y que los datos sean válidos.",
                 ex);

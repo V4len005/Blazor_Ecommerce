@@ -2,7 +2,7 @@
 @inject IProductoService ProductoServicio
 @inject CarritoState Carrito
 
-<PageTitle>@(producto?.Nombre ?? "Producto") | ValTech</PageTitle>
+<PageTitle>@(producto?.Nombre ?? "Producto") | @Tienda.Nombre</PageTitle>
 
 <AlertError Mensaje="@mensajeError" OnCerrar="CerrarError" />
 

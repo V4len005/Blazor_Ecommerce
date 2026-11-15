@@ -9,10 +9,12 @@ namespace Blazor_Ecommerce.Services;
 public class PedidoService : IPedidoService
 {
     private readonly IDbContextFactory<TiendaDbContext> _fabrica;
+    private readonly ILogger<PedidoService> _logger;
 
-    public PedidoService(IDbContextFactory<TiendaDbContext> fabrica)
+    public PedidoService(IDbContextFactory<TiendaDbContext> fabrica, ILogger<PedidoService> logger)
     {
         _fabrica = fabrica;
+        _logger = logger;
     }
 
     public async Task<Pedido> ConfirmarPedido(SolicitudPedido solicitud)
@@ -44,6 +46,9 @@ public class PedidoService : IPedidoService
         {
             if (!productos.TryGetValue(linea.ProductoId, out var producto) || !producto.Activo)
             {
+                _logger.LogWarning(
+                    "Pedido rechazado: el producto {ProductoId} no está disponible.", linea.ProductoId);
+
                 throw new InvalidOperationException(
                     "Uno de los productos de tu carrito ya no está disponible. Revisá tu carrito.");
             }
@@ -56,10 +61,20 @@ public class PedidoService : IPedidoService
                 PrecioUnitario = producto.Precio
             });
 
-            // Descuenta el stock (y falla si no alcanza) y agrega el movimiento, sin guardar todavía.
-            AplicadorStock.Aplicar(
-                contexto, producto, TipoMovimiento.Salida, MotivoMovimiento.Venta,
-                linea.Cantidad, "Venta online", pedido);
+            try
+            {
+                // Descuenta el stock (y falla si no alcanza) y agrega el movimiento, sin guardar todavía.
+                AplicadorStock.Aplicar(
+                    contexto, producto, TipoMovimiento.Salida, MotivoMovimiento.Venta,
+                    linea.Cantidad, "Venta online", pedido);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(
+                    "Pedido rechazado por stock del producto {ProductoId}: {Motivo}", producto.Id, ex.Message);
+
+                throw;
+            }
         }
 
         pedido.Total = pedido.Items.Sum(i => i.Subtotal);
@@ -72,14 +87,23 @@ public class PedidoService : IPedidoService
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            _logger.LogWarning(ex, "Conflicto de stock al confirmar un pedido.");
+
             throw new InvalidOperationException(
                 "El stock de algún producto cambió mientras confirmabas. Revisá tu carrito e intentá de nuevo.", ex);
         }
         catch (DbUpdateException ex)
         {
+            _logger.LogError(ex, "Error de base de datos al confirmar un pedido.");
+
             throw new InvalidOperationException(
                 "No se pudo confirmar el pedido. Intentá de nuevo en unos minutos.", ex);
         }
+
+        // El log no incluye datos del cliente (nombre, email, teléfono ni dirección).
+        _logger.LogInformation(
+            "Pedido {PedidoId} confirmado: {Items} producto(s), total {Total}.",
+            pedido.Id, pedido.Items.Count, pedido.Total);
 
         return pedido;
     }
@@ -158,10 +182,16 @@ public class PedidoService : IPedidoService
             throw new InvalidOperationException("El pedido no existe.");
         }
 
-        if (!pedido.Estado.PuedePasarA(nuevoEstado))
+        var estadoAnterior = pedido.Estado;
+
+        if (!estadoAnterior.PuedePasarA(nuevoEstado))
         {
+            _logger.LogWarning(
+                "Transición no permitida en el pedido {PedidoId}: de {Anterior} a {Nuevo}.",
+                pedidoId, estadoAnterior, nuevoEstado);
+
             throw new InvalidOperationException(
-                $"Un pedido en estado {pedido.Estado} no puede pasar a {nuevoEstado}.");
+                $"Un pedido en estado {estadoAnterior} no puede pasar a {nuevoEstado}.");
         }
 
         if (nuevoEstado == EstadoPedido.Cancelado)
@@ -178,14 +208,23 @@ public class PedidoService : IPedidoService
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            _logger.LogWarning(ex, "Conflicto de concurrencia al cambiar el estado del pedido {PedidoId}.", pedidoId);
+
             throw new InvalidOperationException(
                 "El pedido (o el stock de sus productos) cambió mientras operabas. Actualizá la pantalla y revisá su estado.", ex);
         }
         catch (DbUpdateException ex)
         {
+            _logger.LogError(ex, "Error de base de datos al cambiar el estado del pedido {PedidoId}.", pedidoId);
+
             throw new InvalidOperationException(
                 "No se pudo cambiar el estado del pedido. Intentá de nuevo en unos minutos.", ex);
         }
+
+        _logger.LogInformation(
+            "Pedido {PedidoId}: de {Anterior} a {Nuevo}{Detalle}.",
+            pedidoId, estadoAnterior, nuevoEstado,
+            nuevoEstado == EstadoPedido.Cancelado ? " (stock devuelto)" : string.Empty);
 
         return pedido;
     }
