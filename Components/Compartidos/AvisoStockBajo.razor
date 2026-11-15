@@ -12,7 +12,7 @@
 }
 
 @code {
-    private const string Titulo = "ValTech: stock bajo";
+    private const string Titulo = $"{Tienda.Nombre}: stock bajo";
 
     /// <summary>Cantidad total de productos con stock bajo.</summary>
     [Parameter, EditorRequired] public int Cantidad { get; set; }

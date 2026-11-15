@@ -1,5 +1,4 @@
-﻿@implements IAsyncDisposable
-@inject IJSRuntime JS
+﻿@inject TiendaJs Js
 
 <button type="button"
         class="btn btn-outline-secondary"
@@ -11,43 +10,38 @@
 </button>
 
 @code {
-    private IJSObjectReference? modulo;
     private bool modoOscuro;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./js/tienda.js");
-            modoOscuro = await modulo.InvokeAsync<bool>("obtenerModoOscuro");
-            await modulo.InvokeVoidAsync("aplicarModoOscuro", modoOscuro);
+            return;
+        }
+
+        try
+        {
+            modoOscuro = await Js.ObtenerModoOscuro();
+            await Js.AplicarModoOscuro(modoOscuro);
             StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // El modo oscuro es una comodidad: si falla, la página se ve en modo claro.
         }
     }
 
     private async Task AlternarModo()
     {
-        if (modulo is null)
-        {
-            return;
-        }
-
         modoOscuro = !modoOscuro;
-        await modulo.InvokeVoidAsync("establecerModoOscuro", modoOscuro);
-    }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (modulo is not null)
+        try
         {
-            try
-            {
-                await modulo.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // El circuito ya se cerró: no hay nada que liberar.
-            }
+            await Js.EstablecerModoOscuro(modoOscuro);
+        }
+        catch (Exception)
+        {
+            // Si no se puede guardar, el botón igual cambia de estado en esta sesión.
         }
     }
 }

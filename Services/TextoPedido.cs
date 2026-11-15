@@ -14,7 +14,7 @@ public static class TextoPedido
     {
         var texto = new StringBuilder();
 
-        texto.AppendLine($"Pedido #{pedido.Id} - ValTech");
+        texto.AppendLine($"Pedido #{pedido.Id} - {Tienda.Nombre}");
         texto.AppendLine($"Fecha: {Formato.FechaHora(pedido.Fecha)}");
         texto.AppendLine($"Estado: {pedido.Estado}");
 
