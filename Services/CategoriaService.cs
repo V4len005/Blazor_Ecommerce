@@ -8,19 +8,25 @@ namespace Blazor_Ecommerce.Services;
 public class CategoriaService : ICategoriaService
 {
     private readonly IDbContextFactory<TiendaDbContext> _fabrica;
+    private readonly ILogger<CategoriaService> _logger;
 
-    public CategoriaService(IDbContextFactory<TiendaDbContext> fabrica)
+    public CategoriaService(IDbContextFactory<TiendaDbContext> fabrica, ILogger<CategoriaService> logger)
     {
         _fabrica = fabrica;
+        _logger = logger;
     }
 
     public async Task<List<Categoria>> ObtenerTodas()
     {
         await using var contexto = await _fabrica.CreateDbContextAsync();
 
-        return await contexto.Categorias
+        var categorias = await contexto.Categorias
             .AsNoTracking()
             .OrderBy(c => c.Nombre)
             .ToListAsync();
+
+        _logger.LogDebug("Se consultaron {Cantidad} categorías.", categorias.Count);
+
+        return categorias;
     }
 }
