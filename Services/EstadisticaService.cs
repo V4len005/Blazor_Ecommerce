@@ -11,10 +11,12 @@ public class EstadisticaService : IEstadisticaService
     private const int CantidadStockBajo = 5;
 
     private readonly IDbContextFactory<TiendaDbContext> _fabrica;
+    private readonly ILogger<EstadisticaService> _logger;
 
-    public EstadisticaService(IDbContextFactory<TiendaDbContext> fabrica)
+    public EstadisticaService(IDbContextFactory<TiendaDbContext> fabrica, ILogger<EstadisticaService> logger)
     {
         _fabrica = fabrica;
+        _logger = logger;
     }
 
     public async Task<EstadisticasPanel> ObtenerPanel()
@@ -71,6 +73,10 @@ public class EstadisticaService : IEstadisticaService
         var masVendidos = vendidos
             .Select(v => new ProductoVendido(v.ProductoId, v.Nombre, v.Unidades))
             .ToList();
+
+        _logger.LogDebug(
+            "Estadísticas del panel calculadas: {Productos} productos activos, {PedidosHoy} pedido(s) de hoy.",
+            productosActivos, pedidosHoy);
 
         return new EstadisticasPanel(
             productosTotales,

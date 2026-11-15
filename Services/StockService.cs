@@ -10,10 +10,12 @@ public class StockService : IStockService
     private const int LargoMaximoObservacion = 200;
 
     private readonly IDbContextFactory<TiendaDbContext> _fabrica;
+    private readonly ILogger<StockService> _logger;
 
-    public StockService(IDbContextFactory<TiendaDbContext> fabrica)
+    public StockService(IDbContextFactory<TiendaDbContext> fabrica, ILogger<StockService> logger)
     {
         _fabrica = fabrica;
+        _logger = logger;
     }
 
     public Task<MovimientoStock> RegistrarEntrada(int productoId, int cantidad, string? observacion) =>
@@ -45,6 +47,8 @@ public class StockService : IStockService
             contexto, producto, TipoMovimiento.Ajuste, MotivoMovimiento.Ajuste, diferencia, texto);
 
         await Guardar(contexto);
+
+        RegistrarEnLog(movimiento, producto);
 
         return movimiento;
     }
@@ -107,6 +111,8 @@ public class StockService : IStockService
 
         await Guardar(contexto);
 
+        RegistrarEnLog(movimiento, producto);
+
         return movimiento;
     }
 
@@ -131,7 +137,12 @@ public class StockService : IStockService
         return texto;
     }
 
-    private static async Task Guardar(TiendaDbContext contexto)
+    private void RegistrarEnLog(MovimientoStock movimiento, Producto producto) =>
+        _logger.LogInformation(
+            "Movimiento de stock: {Tipo}/{Motivo} de {Cantidad} unidad(es) del producto {ProductoId}; stock resultante {StockResultante}.",
+            movimiento.Tipo, movimiento.Motivo, movimiento.Cantidad, producto.Id, producto.StockActual);
+
+    private async Task Guardar(TiendaDbContext contexto)
     {
         try
         {
@@ -140,11 +151,15 @@ public class StockService : IStockService
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            _logger.LogWarning(ex, "Conflicto de concurrencia al registrar un movimiento de stock.");
+
             throw new InvalidOperationException(
                 "El stock cambió mientras operabas. Actualizá la pantalla y volvé a intentarlo.", ex);
         }
         catch (DbUpdateException ex)
         {
+            _logger.LogError(ex, "Error de base de datos al registrar un movimiento de stock.");
+
             throw new InvalidOperationException("No se pudo registrar el movimiento de stock.", ex);
         }
     }
