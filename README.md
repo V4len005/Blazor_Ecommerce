@@ -10,6 +10,8 @@ Tienda online de tecnología (consolas, notebooks, periféricos y accesorios) co
 
 ## Capturas
 
+Capturas de la aplicación en producción, en modo claro y oscuro y en vista móvil.
+
 | Inicio | Catálogo |
 |---|---|
 | ![Inicio](documento/capturas/inicio.png) | ![Catálogo](documento/capturas/catalogo.png) |
